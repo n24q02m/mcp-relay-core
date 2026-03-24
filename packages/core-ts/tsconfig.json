@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "es2021",
+    "lib": ["es2022"],
+    "module": "es2022",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "outDir": "build",
+    "rootDir": "src",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
+  },
+  "include": ["src"]
+}
