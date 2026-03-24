@@ -1,0 +1,46 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":semanticCommits"],
+  "schedule": ["before 5am"],
+  "timezone": "Asia/Ho_Chi_Minh",
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 3,
+  "labels": ["dependencies"],
+  "rangeStrategy": "bump",
+  "lockFileMaintenance": { "enabled": true },
+  "packageRules": [
+    {
+      "description": "Auto-merge non-major devDependencies",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    },
+    {
+      "description": "Auto-merge patch production dependencies",
+      "matchDepTypes": ["dependencies"],
+      "matchUpdateTypes": ["patch"],
+      "automerge": true
+    },
+    {
+      "description": "Pin GitHub Actions to SHA",
+      "matchManagers": ["github-actions"],
+      "pinDigests": true
+    },
+    {
+      "description": "Pin Python to 3.13.x",
+      "matchPackageNames": ["python"],
+      "allowedVersions": ">=3.13.0 <3.14.0"
+    },
+    {
+      "description": "Pin Node.js to 24.x",
+      "matchPackageNames": ["node"],
+      "allowedVersions": ">=24.0.0 <25.0.0"
+    },
+    {
+      "description": "Disable runtime updates from mise",
+      "matchManagers": ["mise"],
+      "matchDepNames": ["python", "node"],
+      "enabled": false
+    }
+  ]
+}

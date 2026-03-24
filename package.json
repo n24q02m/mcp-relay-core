@@ -1,0 +1,10 @@
+{
+  "name": "mcp-relay-core",
+  "private": true,
+  "workspaces": [
+    "packages/core-ts",
+    "packages/relay-server"
+  ],
+  "packageManager": "bun@1.2.21",
+  "engines": { "node": ">=24.14.0" }
+}
