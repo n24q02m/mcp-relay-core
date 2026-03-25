@@ -68,21 +68,19 @@ jobs:
       - name: Build package
         run: cd packages/${{ inputs.package }} && bun run build
 
-      # TODO: PSR semantic release for monorepo
-      # - uses: python-semantic-release/python-semantic-release@v10
-      #   id: release
-      #   with:
-      #     github_token: ${{ secrets.GH_PAT }}
-      #     config_file: packages/${{ inputs.package }}/semantic-release.toml
-      #     prerelease: ${{ inputs.release_type == 'beta' }}
-      #     prerelease_token: beta
-
-      # TODO: npm publish
-      # - name: Publish to npm
-      #   if: steps.release.outputs.released == 'true'
-      #   run: cd packages/${{ inputs.package }} && npm publish --no-git-checks --tag ${{ steps.release.outputs.is_prerelease == 'true' && 'beta' || 'latest' }}
-      #   env:
-      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish to npm
+        id: release
+        run: |
+          cd packages/${{ inputs.package }}
+          TAG=${{ inputs.release_type == 'beta' && 'beta' || 'latest' }}
+          npm publish --access public --no-git-checks --tag "$TAG"
+          echo "released=true" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=${{ inputs.package }}@v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "is_prerelease=${{ inputs.release_type == 'beta' && 'true' || 'false' }}" >> "$GITHUB_OUTPUT"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   # ============================================================================
   # Release Python (core-py)
@@ -112,21 +110,18 @@ jobs:
       - name: Build package
         run: cd packages/core-py && uv build
 
-      # TODO: PSR semantic release
-      # - uses: python-semantic-release/python-semantic-release@v10
-      #   id: release
-      #   with:
-      #     github_token: ${{ secrets.GH_PAT }}
-      #     config_file: packages/core-py/semantic-release.toml
-      #     prerelease: ${{ inputs.release_type == 'beta' }}
-      #     prerelease_token: beta
-
-      # TODO: PyPI publish
-      # - name: Publish to PyPI
-      #   if: steps.release.outputs.released == 'true'
-      #   run: cd packages/core-py && uv publish
-      #   env:
-      #     UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
+      - name: Publish to PyPI
+        id: release
+        run: |
+          cd packages/core-py
+          uv publish
+          echo "released=true" >> "$GITHUB_OUTPUT"
+          VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=core-py@v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "is_prerelease=${{ inputs.release_type == 'beta' && 'true' || 'false' }}" >> "$GITHUB_OUTPUT"
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
 
   # ============================================================================
   # Build Docker (relay-server only)
