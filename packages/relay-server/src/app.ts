@@ -1,10 +1,14 @@
 import cors from 'cors'
 import express from 'express'
+import helmet from 'helmet'
 import { rateLimiter } from './middleware/rate-limit.js'
 import { sessionsRouter } from './routes/sessions.js'
 
 export function createApp(): express.Express {
   const app = express()
+
+  // Security headers
+  app.use(helmet())
 
   const corsOrigin = process.env.CORS_ORIGIN ?? '*'
   app.use(cors({ origin: corsOrigin }))
