@@ -9,8 +9,9 @@ export function createApp(): express.Express {
   const corsOrigin = process.env.CORS_ORIGIN ?? '*'
   app.use(cors({ origin: corsOrigin }))
   app.use(express.json({ limit: '1mb' }))
-  app.use(rateLimiter)
 
+  // Rate limit only API routes, not static files
+  app.use('/api', rateLimiter)
   app.use('/api/sessions', sessionsRouter)
 
   const pagesDir = process.env.PAGES_DIR
