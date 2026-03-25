@@ -9,7 +9,7 @@ import {
   listConfigs,
   readConfig,
   setConfigPath,
-  writeConfig,
+  writeConfig
 } from '../../src/storage/config-file.js'
 
 let tempDir: string
