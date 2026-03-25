@@ -1,4 +1,4 @@
-import { parseFragment, getSessionId, submitResult } from '../shared/relay-client.js'
+import { parseFragment, getSessionId, submitResult } from '/shared/relay-client.js'
 import {
   importPublicKey,
   generateKeyPair,
@@ -6,8 +6,8 @@ import {
   deriveAesKey,
   encrypt,
   exportPublicKey,
-} from '../shared/crypto.js'
-import { renderModes, renderFields, showStatus } from '../shared/ui.js'
+} from '/shared/crypto.js'
+import { renderModes, renderFields, showStatus } from '/shared/ui.js'
 
 const schema = {
   modes: [

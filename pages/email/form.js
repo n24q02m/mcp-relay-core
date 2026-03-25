@@ -1,4 +1,4 @@
-import { parseFragment, getSessionId, submitResult } from '../shared/relay-client.js'
+import { parseFragment, getSessionId, submitResult } from '/shared/relay-client.js'
 import {
   importPublicKey,
   generateKeyPair,
@@ -6,8 +6,8 @@ import {
   deriveAesKey,
   encrypt,
   exportPublicKey,
-} from '../shared/crypto.js'
-import { renderFields, showStatus } from '../shared/ui.js'
+} from '/shared/crypto.js'
+import { renderFields, showStatus } from '/shared/ui.js'
 
 const OAUTH_DOMAINS = ['outlook.com', 'hotmail.com', 'live.com']
 const APP_PASSWORD_DOMAINS = {
