@@ -7,6 +7,12 @@ export function renderFields(container, fields) {
     const label = document.createElement('label')
     label.textContent = field.label
     label.htmlFor = field.key
+    if (field.required !== false) {
+      const ast = document.createElement('span')
+      ast.setAttribute('aria-hidden', 'true')
+      ast.textContent = ' *'
+      label.appendChild(ast)
+    }
     div.appendChild(label)
 
     const input = document.createElement('input')
@@ -19,7 +25,9 @@ export function renderFields(container, fields) {
 
     if (field.helpText) {
       const help = document.createElement('small')
+      help.id = `${field.key}-help`
       help.textContent = field.helpText
+      input.setAttribute('aria-describedby', help.id)
       div.appendChild(help)
     }
     if (field.helpUrl) {
@@ -39,16 +47,23 @@ export function renderFields(container, fields) {
 export function renderModes(container, modes, onSelect) {
   const select = document.createElement('div')
   select.className = 'mode-selector'
+  select.setAttribute('role', 'group')
+  select.setAttribute('aria-label', 'Select mode')
 
   for (const mode of modes) {
     const btn = document.createElement('button')
     btn.type = 'button'
     btn.className = 'mode-btn'
     btn.dataset.modeId = mode.id
+    btn.setAttribute('aria-pressed', 'false')
     btn.innerHTML = `<strong>${mode.label}</strong><br><small>${mode.description}</small>`
     btn.addEventListener('click', () => {
-      container.querySelectorAll('.mode-btn').forEach((b) => b.classList.remove('active'))
+      container.querySelectorAll('.mode-btn').forEach((b) => {
+        b.classList.remove('active')
+        b.setAttribute('aria-pressed', 'false')
+      })
       btn.classList.add('active')
+      btn.setAttribute('aria-pressed', 'true')
       onSelect(mode)
     })
     select.appendChild(btn)
