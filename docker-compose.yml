@@ -1,0 +1,9 @@
+services:
+  relay:
+    build: .
+    ports:
+      - "3000:8080"
+    environment:
+      - PORT=8080
+      - PAGES_DIR=/app/pages
+      - CORS_ORIGIN=*
