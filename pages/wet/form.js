@@ -1,13 +1,13 @@
-import { parseFragment, getSessionId, submitResult } from '/shared/relay-client.js'
 import {
-  importPublicKey,
-  generateKeyPair,
-  deriveSharedSecret,
   deriveAesKey,
+  deriveSharedSecret,
   encrypt,
   exportPublicKey,
+  generateKeyPair,
+  importPublicKey
 } from '/shared/crypto.js'
-import { renderModes, renderFields, showStatus } from '/shared/ui.js'
+import { getSessionId, parseFragment, submitResult } from '/shared/relay-client.js'
+import { renderFields, renderModes, showStatus } from '/shared/ui.js'
 
 const schema = {
   modes: [
@@ -15,7 +15,7 @@ const schema = {
       id: 'local',
       label: 'Local (ONNX)',
       description: 'Uses built-in ONNX models. No setup needed.',
-      fields: [],
+      fields: []
     },
     {
       id: 'proxy',
@@ -26,16 +26,16 @@ const schema = {
           key: 'LITELLM_PROXY_URL',
           label: 'Proxy URL',
           type: 'url',
-          placeholder: 'https://litellm.example.com',
+          placeholder: 'https://litellm.example.com'
         },
         {
           key: 'LITELLM_PROXY_KEY',
           label: 'Proxy Key',
           type: 'password',
           required: false,
-          helpText: 'Optional authentication key',
-        },
-      ],
+          helpText: 'Optional authentication key'
+        }
+      ]
     },
     {
       id: 'sdk',
@@ -47,11 +47,11 @@ const schema = {
           label: 'API Keys',
           type: 'password',
           placeholder: 'GEMINI_API_KEY:AIza...',
-          helpText: 'Format: PROVIDER_KEY:value',
-        },
-      ],
-    },
-  ],
+          helpText: 'Format: PROVIDER_KEY:value'
+        }
+      ]
+    }
+  ]
 }
 
 const { publicKey: cliPubKeyB64, passphrase } = parseFragment()
@@ -98,11 +98,7 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
 
       const ok = await submitResult(sessionId, browserPub, ciphertext, iv, tag)
       if (ok) {
-        showStatus(
-          document.getElementById('status-container'),
-          'Setup complete! You can close this page.',
-          'success'
-        )
+        showStatus(document.getElementById('status-container'), 'Setup complete! You can close this page.', 'success')
         document.getElementById('setup-form').style.display = 'none'
       } else {
         throw new Error('Failed to submit')

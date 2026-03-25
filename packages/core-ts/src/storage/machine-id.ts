@@ -17,7 +17,10 @@ export async function getMachineId(): Promise<string> {
     }
     if (process.platform === 'win32') {
       const { stdout } = await execFileAsync('reg', [
-        'query', 'HKLM\\SOFTWARE\\Microsoft\\Cryptography', '/v', 'MachineGuid',
+        'query',
+        'HKLM\\SOFTWARE\\Microsoft\\Cryptography',
+        '/v',
+        'MachineGuid'
       ])
       const match = stdout.match(/MachineGuid\s+REG_SZ\s+(\S+)/)
       if (match) return match[1]

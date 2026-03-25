@@ -1,12 +1,12 @@
-import { parseFragment, getSessionId, submitResult } from '/shared/relay-client.js'
 import {
-  importPublicKey,
-  generateKeyPair,
-  deriveSharedSecret,
   deriveAesKey,
+  deriveSharedSecret,
   encrypt,
   exportPublicKey,
+  generateKeyPair,
+  importPublicKey
 } from '/shared/crypto.js'
+import { getSessionId, parseFragment, submitResult } from '/shared/relay-client.js'
 import { renderFields, showStatus } from '/shared/ui.js'
 
 const fields = [
@@ -16,8 +16,8 @@ const fields = [
     type: 'password',
     placeholder: 'ntn_...',
     helpUrl: 'https://www.notion.so/my-integrations',
-    helpText: 'Create an internal integration and copy the token',
-  },
+    helpText: 'Create an internal integration and copy the token'
+  }
 ]
 
 const { publicKey: cliPubKeyB64, passphrase } = parseFragment()
@@ -58,11 +58,7 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
 
       const ok = await submitResult(sessionId, browserPub, ciphertext, iv, tag)
       if (ok) {
-        showStatus(
-          document.getElementById('status-container'),
-          'Setup complete! You can close this page.',
-          'success'
-        )
+        showStatus(document.getElementById('status-container'), 'Setup complete! You can close this page.', 'success')
         document.getElementById('setup-form').style.display = 'none'
       } else {
         throw new Error('Failed to submit')

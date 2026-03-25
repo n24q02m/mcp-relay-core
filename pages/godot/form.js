@@ -1,12 +1,12 @@
-import { parseFragment, getSessionId, submitResult } from '/shared/relay-client.js'
 import {
-  importPublicKey,
-  generateKeyPair,
-  deriveSharedSecret,
   deriveAesKey,
+  deriveSharedSecret,
   encrypt,
   exportPublicKey,
+  generateKeyPair,
+  importPublicKey
 } from '/shared/crypto.js'
+import { getSessionId, parseFragment, submitResult } from '/shared/relay-client.js'
 import { renderFields, showStatus } from '/shared/ui.js'
 
 const fields = [
@@ -15,7 +15,7 @@ const fields = [
     label: 'Project Path',
     type: 'text',
     placeholder: '/path/to/project',
-    helpText: 'Path to your Godot project directory',
+    helpText: 'Path to your Godot project directory'
   },
   {
     key: 'GODOT_PATH',
@@ -23,8 +23,8 @@ const fields = [
     type: 'text',
     placeholder: '/usr/bin/godot4',
     required: false,
-    helpText: 'Leave empty for auto-detection',
-  },
+    helpText: 'Leave empty for auto-detection'
+  }
 ]
 
 const { publicKey: cliPubKeyB64, passphrase } = parseFragment()
@@ -65,11 +65,7 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
 
       const ok = await submitResult(sessionId, browserPub, ciphertext, iv, tag)
       if (ok) {
-        showStatus(
-          document.getElementById('status-container'),
-          'Setup complete! You can close this page.',
-          'success'
-        )
+        showStatus(document.getElementById('status-container'), 'Setup complete! You can close this page.', 'success')
         document.getElementById('setup-form').style.display = 'none'
       } else {
         throw new Error('Failed to submit')

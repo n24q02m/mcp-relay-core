@@ -1,13 +1,13 @@
-import { parseFragment, getSessionId, submitResult } from '/shared/relay-client.js'
 import {
-  importPublicKey,
-  generateKeyPair,
-  deriveSharedSecret,
   deriveAesKey,
+  deriveSharedSecret,
   encrypt,
   exportPublicKey,
+  generateKeyPair,
+  importPublicKey
 } from '/shared/crypto.js'
-import { renderModes, renderFields, showStatus } from '/shared/ui.js'
+import { getSessionId, parseFragment, submitResult } from '/shared/relay-client.js'
+import { renderFields, renderModes, showStatus } from '/shared/ui.js'
 
 const schema = {
   modes: [
@@ -22,9 +22,9 @@ const schema = {
           type: 'password',
           placeholder: '123456:ABC-DEF...',
           helpUrl: 'https://core.telegram.org/bots#botfather',
-          helpText: 'Get from @BotFather on Telegram',
-        },
-      ],
+          helpText: 'Get from @BotFather on Telegram'
+        }
+      ]
     },
     {
       id: 'user',
@@ -35,22 +35,22 @@ const schema = {
           key: 'TELEGRAM_API_ID',
           label: 'API ID',
           type: 'number',
-          helpUrl: 'https://my.telegram.org/apps',
+          helpUrl: 'https://my.telegram.org/apps'
         },
         {
           key: 'TELEGRAM_API_HASH',
           label: 'API Hash',
-          type: 'password',
+          type: 'password'
         },
         {
           key: 'TELEGRAM_PHONE',
           label: 'Phone Number',
           type: 'tel',
-          placeholder: '+84...',
-        },
-      ],
-    },
-  ],
+          placeholder: '+84...'
+        }
+      ]
+    }
+  ]
 }
 
 const { publicKey: cliPubKeyB64, passphrase } = parseFragment()
@@ -101,11 +101,7 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
       // Submit
       const ok = await submitResult(sessionId, browserPub, ciphertext, iv, tag)
       if (ok) {
-        showStatus(
-          document.getElementById('status-container'),
-          'Setup complete! You can close this page.',
-          'success'
-        )
+        showStatus(document.getElementById('status-container'), 'Setup complete! You can close this page.', 'success')
         document.getElementById('setup-form').style.display = 'none'
       } else {
         throw new Error('Failed to submit')

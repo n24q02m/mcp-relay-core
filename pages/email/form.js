@@ -1,12 +1,12 @@
-import { parseFragment, getSessionId, submitResult } from '/shared/relay-client.js'
 import {
-  importPublicKey,
-  generateKeyPair,
-  deriveSharedSecret,
   deriveAesKey,
+  deriveSharedSecret,
   encrypt,
   exportPublicKey,
+  generateKeyPair,
+  importPublicKey
 } from '/shared/crypto.js'
+import { getSessionId, parseFragment, submitResult } from '/shared/relay-client.js'
 import { renderFields, showStatus } from '/shared/ui.js'
 
 const OAUTH_DOMAINS = ['outlook.com', 'hotmail.com', 'live.com']
@@ -14,21 +14,21 @@ const APP_PASSWORD_DOMAINS = {
   'gmail.com': {
     label: 'App Password',
     helpUrl: 'https://myaccount.google.com/apppasswords',
-    helpText: 'Generate an App Password in your Google Account settings',
+    helpText: 'Generate an App Password in your Google Account settings'
   },
   'googlemail.com': {
     label: 'App Password',
     helpUrl: 'https://myaccount.google.com/apppasswords',
-    helpText: 'Generate an App Password in your Google Account settings',
+    helpText: 'Generate an App Password in your Google Account settings'
   },
   'yahoo.com': {
     label: 'App Password',
-    helpText: 'Generate an App Password in Yahoo Account Security settings',
+    helpText: 'Generate an App Password in Yahoo Account Security settings'
   },
   'icloud.com': {
     label: 'App Password',
-    helpText: 'Generate an App Password at appleid.apple.com',
-  },
+    helpText: 'Generate an App Password at appleid.apple.com'
+  }
 }
 
 const { publicKey: cliPubKeyB64, passphrase } = parseFragment()
@@ -51,8 +51,8 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
       key: 'EMAIL_ADDRESS',
       label: 'Email Address',
       type: 'email',
-      placeholder: 'you@example.com',
-    },
+      placeholder: 'you@example.com'
+    }
   ]
   renderFields(fieldsContainer, emailField)
 
@@ -88,8 +88,8 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
           label: info.label,
           type: 'password',
           helpUrl: info.helpUrl,
-          helpText: info.helpText,
-        },
+          helpText: info.helpText
+        }
       ]
       renderFields(extraContainer, fields)
       dynamicFields = fields
@@ -100,7 +100,7 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
         {
           key: 'EMAIL_PASSWORD',
           label: 'Password',
-          type: 'password',
+          type: 'password'
         },
         {
           key: 'IMAP_HOST',
@@ -108,8 +108,8 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
           type: 'text',
           placeholder: 'imap.example.com',
           required: false,
-          helpText: 'Optional. Leave empty for auto-detection.',
-        },
+          helpText: 'Optional. Leave empty for auto-detection.'
+        }
       ]
       renderFields(extraContainer, fields)
       dynamicFields = fields
@@ -150,11 +150,7 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
 
       const ok = await submitResult(sessionId, browserPub, ciphertext, iv, tag)
       if (ok) {
-        showStatus(
-          document.getElementById('status-container'),
-          'Setup complete! You can close this page.',
-          'success'
-        )
+        showStatus(document.getElementById('status-container'), 'Setup complete! You can close this page.', 'success')
         document.getElementById('setup-form').style.display = 'none'
       } else {
         throw new Error('Failed to submit')

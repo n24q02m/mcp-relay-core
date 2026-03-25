@@ -54,10 +54,7 @@ export function toBase64(uint8) {
 }
 
 function toBase64url(uint8) {
-  return toBase64(uint8)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '')
+  return toBase64(uint8).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
 }
 
 function fromBase64url(base64url) {
