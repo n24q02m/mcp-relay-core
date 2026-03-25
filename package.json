@@ -5,6 +5,14 @@
     "packages/core-ts",
     "packages/relay-server"
   ],
+  "scripts": {
+    "test:e2e": "npx playwright test --config e2e/playwright.config.ts"
+  },
   "packageManager": "bun@1.2.21",
-  "engines": { "node": ">=24.14.0" }
+  "engines": {
+    "node": ">=24.14.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
+  }
 }
