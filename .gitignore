@@ -17,5 +17,7 @@ __pycache__/
 .venv/
 *.db
 *.enc
+test-results/
+playwright-report/
 .DS_Store
 Thumbs.db
