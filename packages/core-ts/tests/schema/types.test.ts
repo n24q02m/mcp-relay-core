@@ -5,7 +5,7 @@ import type {
   CredentialsRoute,
   DynamicFlow,
   OAuthRoute,
-  RelayConfigSchema,
+  RelayConfigSchema
 } from '../../src/schema/types.js'
 
 describe('schema/types', () => {
@@ -22,22 +22,22 @@ describe('schema/types', () => {
           helpUrl: 'https://my.telegram.org/apps',
           helpText: 'Get your API ID from my.telegram.org',
           required: true,
-          validation: '^\\d+$',
+          validation: '^\\d+$'
         },
         {
           key: 'api_hash',
           label: 'API Hash',
           type: 'password',
-          required: true,
+          required: true
         },
         {
           key: 'phone',
           label: 'Phone Number',
           type: 'tel',
           placeholder: '+1234567890',
-          required: true,
-        },
-      ],
+          required: true
+        }
+      ]
     }
     expect(schema.server).toBe('telegram')
     expect(schema.fields).toHaveLength(3)
@@ -54,22 +54,18 @@ describe('schema/types', () => {
           id: 'bot',
           label: 'Bot Token',
           description: 'Use a Slack Bot token',
-          fields: [
-            { key: 'bot_token', label: 'Bot Token', type: 'password', required: true },
-          ],
+          fields: [{ key: 'bot_token', label: 'Bot Token', type: 'password', required: true }]
         },
         {
           id: 'user',
           label: 'User Token',
           description: 'Use a Slack User token',
-          fields: [
-            { key: 'user_token', label: 'User Token', type: 'password', required: true },
-          ],
-        },
-      ],
+          fields: [{ key: 'user_token', label: 'User Token', type: 'password', required: true }]
+        }
+      ]
     }
     expect(schema.modes).toHaveLength(2)
-    expect(schema.modes![0].id).toBe('bot')
+    expect(schema.modes?.[0].id).toBe('bot')
   })
 
   it('should type-check a dynamicFlow schema (Email example)', () => {
@@ -78,7 +74,7 @@ describe('schema/types', () => {
       label: 'Email Provider',
       type: 'select',
       choices: ['gmail', 'outlook', 'custom'],
-      required: true,
+      required: true
     }
 
     const oauthRoute: OAuthRoute = {
@@ -87,8 +83,8 @@ describe('schema/types', () => {
       message: 'Sign in with Google',
       oauthConfig: {
         clientId: 'xxx.apps.googleusercontent.com',
-        scopes: ['https://mail.google.com/'],
-      },
+        scopes: ['https://mail.google.com/']
+      }
     }
 
     const credentialsRoute: CredentialsRoute = {
@@ -98,40 +94,36 @@ describe('schema/types', () => {
         { key: 'smtp_host', label: 'SMTP Host', type: 'text', required: true },
         { key: 'smtp_port', label: 'SMTP Port', type: 'number', default: '587' },
         { key: 'username', label: 'Username', type: 'email', required: true },
-        { key: 'password', label: 'Password', type: 'password', required: true },
-      ],
+        { key: 'password', label: 'Password', type: 'password', required: true }
+      ]
     }
 
     const flow: DynamicFlow = {
       entryField,
-      routes: [oauthRoute, credentialsRoute],
+      routes: [oauthRoute, credentialsRoute]
     }
 
     const schema: RelayConfigSchema = {
       server: 'email',
       displayName: 'Email MCP',
-      dynamicFlow: flow,
+      dynamicFlow: flow
     }
 
     expect(schema.dynamicFlow).toBeDefined()
-    expect(schema.dynamicFlow!.routes).toHaveLength(2)
-    expect(schema.dynamicFlow!.routes[0].action).toBe('oauth2_device_code')
-    expect(schema.dynamicFlow!.routes[1].action).toBe('credentials')
+    expect(schema.dynamicFlow?.routes).toHaveLength(2)
+    expect(schema.dynamicFlow?.routes[0].action).toBe('oauth2_device_code')
+    expect(schema.dynamicFlow?.routes[1].action).toBe('credentials')
   })
 
   it('should type-check optional fields', () => {
     const schema: RelayConfigSchema = {
       server: 'notion',
       displayName: 'Notion MCP',
-      fields: [
-        { key: 'token', label: 'Integration Token', type: 'password', required: true },
-      ],
-      optional: [
-        { key: 'workspace_id', label: 'Workspace ID', type: 'text', helpText: 'Optional filter' },
-      ],
+      fields: [{ key: 'token', label: 'Integration Token', type: 'password', required: true }],
+      optional: [{ key: 'workspace_id', label: 'Workspace ID', type: 'text', helpText: 'Optional filter' }]
     }
     expect(schema.optional).toHaveLength(1)
-    expect(schema.optional![0].required).toBeUndefined()
+    expect(schema.optional?.[0].required).toBeUndefined()
   })
 
   it('should type-check ConfigMode interface', () => {
@@ -139,9 +131,7 @@ describe('schema/types', () => {
       id: 'api_key',
       label: 'API Key',
       description: 'Authenticate with an API key',
-      fields: [
-        { key: 'api_key', label: 'API Key', type: 'password', required: true },
-      ],
+      fields: [{ key: 'api_key', label: 'API Key', type: 'password', required: true }]
     }
     expect(mode.id).toBe('api_key')
     expect(mode.fields).toHaveLength(1)

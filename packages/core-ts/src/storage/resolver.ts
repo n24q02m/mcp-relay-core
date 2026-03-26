@@ -10,7 +10,7 @@ export interface ResolvedConfig {
 export async function resolveConfig(
   serverName: string,
   requiredFields: string[],
-  defaults?: Record<string, string>,
+  defaults?: Record<string, string>
 ): Promise<ResolvedConfig> {
   // 1. Check env vars -- if ALL required fields present as env vars, use them
   const envConfig: Record<string, string> = {}
