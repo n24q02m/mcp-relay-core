@@ -1,6 +1,6 @@
 // EFF Long Wordlist - 7776 words for Diceware passphrase generation
 // Source: https://www.eff.org/files/2016/07/18/eff_large_wordlist.txt
-// prettier-ignore
+// biome-ignore format: huge list
 export const WORDLIST: string[] = [
   'abacus', 'abdomen', 'abdominal', 'abide', 'abiding', 'ability', 'ablaze', 'able',
   'abnormal', 'abrasion', 'abrasive', 'abreast', 'abridge', 'abroad', 'abruptly', 'absence',
