@@ -9,6 +9,10 @@ import subprocess
 import uuid
 
 
+_cached_machine_id: str | None = None
+_cached_username: str | None = None
+
+
 def get_machine_id() -> str:
     """Get a stable machine identifier.
 
@@ -22,13 +26,18 @@ def get_machine_id() -> str:
     Returns:
         Machine identifier string.
     """
+    global _cached_machine_id
+    if _cached_machine_id is not None:
+        return _cached_machine_id
+
     system = platform.system()
+    machine_id = None
     try:
         if system == "Linux":
             with open("/etc/machine-id") as f:
-                return f.read().strip()
+                machine_id = f.read().strip()
 
-        if system == "Darwin":
+        elif system == "Darwin":
             result = subprocess.run(
                 ["ioreg", "-rd1", "-c", "IOPlatformExpertDevice"],
                 capture_output=True,
@@ -37,9 +46,9 @@ def get_machine_id() -> str:
             )
             match = re.search(r'"IOPlatformUUID"\s*=\s*"([^"]+)"', result.stdout)
             if match:
-                return match.group(1)
+                machine_id = match.group(1)
 
-        if system == "Windows":
+        elif system == "Windows":
             result = subprocess.run(
                 [
                     "reg",
@@ -54,13 +63,17 @@ def get_machine_id() -> str:
             )
             match = re.search(r"MachineGuid\s+REG_SZ\s+(\S+)", result.stdout)
             if match:
-                return match.group(1)
+                machine_id = match.group(1)
     except Exception:
         pass
 
-    # Fallback: hostname + first MAC address
-    mac = _get_first_mac()
-    return f"{socket.gethostname()}-{mac}"
+    if machine_id is None:
+        # Fallback: hostname + first MAC address
+        mac = _get_first_mac()
+        machine_id = f"{socket.gethostname()}-{mac}"
+
+    _cached_machine_id = machine_id
+    return machine_id
 
 
 def _get_first_mac() -> str:
@@ -87,7 +100,14 @@ def get_username() -> str:
     Returns:
         Username string.
     """
+    global _cached_username
+    if _cached_username is not None:
+        return _cached_username
+
     try:
-        return getpass.getuser()
+        username = getpass.getuser()
     except Exception:
-        return os.environ.get("USER", os.environ.get("USERNAME", "unknown"))
+        username = os.environ.get("USER", os.environ.get("USERNAME", "unknown"))
+
+    _cached_username = username
+    return username
