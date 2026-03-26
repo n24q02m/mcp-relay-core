@@ -45,10 +45,15 @@ export function renderModes(container, modes, onSelect) {
     btn.type = 'button'
     btn.className = 'mode-btn'
     btn.dataset.modeId = mode.id
+    btn.setAttribute('aria-pressed', 'false')
     btn.innerHTML = `<strong>${mode.label}</strong><br><small>${mode.description}</small>`
     btn.addEventListener('click', () => {
-      container.querySelectorAll('.mode-btn').forEach((b) => b.classList.remove('active'))
+      container.querySelectorAll('.mode-btn').forEach((b) => {
+        b.classList.remove('active')
+        b.setAttribute('aria-pressed', 'false')
+      })
       btn.classList.add('active')
+      btn.setAttribute('aria-pressed', 'true')
       onSelect(mode)
     })
     select.appendChild(btn)
@@ -62,6 +67,8 @@ export function showStatus(container, message, type = 'info') {
   const status = document.getElementById('status') || document.createElement('div')
   status.id = 'status'
   status.className = `status status-${type}`
+  status.setAttribute('role', 'status')
+  status.setAttribute('aria-live', 'polite')
   status.textContent = message
   container.appendChild(status)
 }
