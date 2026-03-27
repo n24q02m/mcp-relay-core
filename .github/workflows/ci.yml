@@ -61,8 +61,6 @@ jobs:
       - name: Upload coverage to Codecov
         if: github.event_name == 'push'
         uses: codecov/codecov-action@1af58845a975a7985b0beb0cbe6fbbb71a41dbad # v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
 
   # ============================================================================
   # Lint & Test Python (core-py)
@@ -102,7 +100,6 @@ jobs:
         if: github.event_name == 'push'
         uses: codecov/codecov-action@1af58845a975a7985b0beb0cbe6fbbb71a41dbad # v5
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
           files: packages/core-py/coverage.xml
 
   # ============================================================================
@@ -200,6 +197,7 @@ jobs:
       issues: write
       pull-requests: write
       contents: read
+      id-token: write
     steps:
       - name: Checkout repo
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -214,11 +212,18 @@ jobs:
             echo "$RANDOM_EOF" >> "$GITHUB_ENV"
           fi
 
+      - name: Authenticate to GCP (Vertex AI)
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ vars.VERTEX_WIF_PROVIDER }}
+          service_account: ${{ vars.VERTEX_SERVICE_ACCOUNT }}
+
       - name: PR Agent action step
         uses: qodo-ai/pr-agent@42d55d4182a4839820b11b6c4d06fce855970301 # main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          VERTEXAI_PROJECT: ${{ vars.VERTEX_PROJECT }}
+          VERTEXAI_LOCATION: us-central1
           PR_REVIEWER__EXTRA_INSTRUCTIONS: ${{ env.CUSTOM_INSTRUCTIONS }}
           PR_CODE_SUGGESTIONS__EXTRA_INSTRUCTIONS: ${{ env.CUSTOM_INSTRUCTIONS }}
           PR_DESCRIPTION__EXTRA_INSTRUCTIONS: ${{ env.CUSTOM_INSTRUCTIONS }}
