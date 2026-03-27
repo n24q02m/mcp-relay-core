@@ -43,79 +43,138 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
 } else {
   const fieldsContainer = document.getElementById('fields')
   const submitBtn = document.getElementById('submit-btn')
-  let dynamicFields = []
+  let accountIndex = 0
 
-  // Render email entry field
-  const emailField = [
-    {
-      key: 'EMAIL_ADDRESS',
-      label: 'Email Address',
-      type: 'email',
-      placeholder: 'you@example.com',
-    },
-  ]
-  renderFields(fieldsContainer, emailField)
+  function createAccountCard(idx) {
+    const card = document.createElement('div')
+    card.className = 'account-card'
+    card.dataset.idx = idx
+    card.style.cssText =
+      'border: 1px solid #333; border-radius: 8px; padding: 16px; margin-bottom: 12px; position: relative;'
 
-  const extraContainer = document.createElement('div')
-  extraContainer.id = 'extra-fields'
-  fieldsContainer.appendChild(extraContainer)
+    const header = document.createElement('div')
+    header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;'
+    const title = document.createElement('strong')
+    title.textContent = `Account ${idx + 1}`
+    header.appendChild(title)
 
-  const emailInput = document.getElementById('EMAIL_ADDRESS')
-  emailInput.addEventListener('input', () => {
-    const domain = emailInput.value.split('@')[1]?.toLowerCase()
-    extraContainer.innerHTML = ''
-    dynamicFields = []
-
-    if (!domain) {
-      submitBtn.disabled = true
-      return
+    if (idx > 0) {
+      const removeBtn = document.createElement('button')
+      removeBtn.type = 'button'
+      removeBtn.textContent = 'Remove'
+      removeBtn.style.cssText =
+        'background: #c0392b; color: white; border: none; border-radius: 4px; padding: 4px 12px; cursor: pointer; font-size: 13px;'
+      removeBtn.addEventListener('click', () => {
+        card.remove()
+        updateAccountNumbers()
+      })
+      header.appendChild(removeBtn)
     }
+    card.appendChild(header)
 
-    if (OAUTH_DOMAINS.includes(domain)) {
-      const notice = document.createElement('div')
-      notice.className = 'field'
-      const msg = document.createElement('p')
-      msg.textContent = 'Outlook requires OAuth2. This will be handled automatically by the server.'
-      notice.appendChild(msg)
-      extraContainer.appendChild(notice)
-      dynamicFields = [{ key: 'AUTH_METHOD', value: 'oauth2' }]
+    const emailContainer = document.createElement('div')
+    renderFields(emailContainer, [
+      {
+        key: `email_${idx}`,
+        label: 'Email Address',
+        type: 'email',
+        placeholder: 'you@example.com',
+      },
+    ])
+    card.appendChild(emailContainer)
+
+    const extraContainer = document.createElement('div')
+    extraContainer.id = `extra_${idx}`
+    card.appendChild(extraContainer)
+
+    const emailInput = emailContainer.querySelector('input[type="email"]')
+    emailInput.addEventListener('input', () => {
+      const domain = emailInput.value.split('@')[1]?.toLowerCase()
+      extraContainer.innerHTML = ''
+
+      if (!domain) return
+
+      if (OAUTH_DOMAINS.includes(domain)) {
+        const notice = document.createElement('div')
+        notice.className = 'field'
+        const msg = document.createElement('p')
+        msg.textContent = 'Outlook requires OAuth2. This will be handled automatically by the server.'
+        notice.appendChild(msg)
+        extraContainer.appendChild(notice)
+      } else if (APP_PASSWORD_DOMAINS[domain]) {
+        const info = APP_PASSWORD_DOMAINS[domain]
+        renderFields(extraContainer, [
+          {
+            key: `password_${idx}`,
+            label: info.label,
+            type: 'password',
+            helpUrl: info.helpUrl,
+            helpText: info.helpText,
+          },
+        ])
+      } else {
+        renderFields(extraContainer, [
+          { key: `password_${idx}`, label: 'Password', type: 'password' },
+          {
+            key: `imap_${idx}`,
+            label: 'IMAP Host',
+            type: 'text',
+            placeholder: 'imap.example.com',
+            required: false,
+            helpText: 'Optional. Leave empty for auto-detection.',
+          },
+        ])
+      }
       submitBtn.disabled = false
-    } else if (APP_PASSWORD_DOMAINS[domain]) {
-      const info = APP_PASSWORD_DOMAINS[domain]
-      const fields = [
-        {
-          key: 'APP_PASSWORD',
-          label: info.label,
-          type: 'password',
-          helpUrl: info.helpUrl,
-          helpText: info.helpText,
-        },
-      ]
-      renderFields(extraContainer, fields)
-      dynamicFields = fields
-      submitBtn.disabled = false
-    } else {
-      // Custom domain
-      const fields = [
-        {
-          key: 'EMAIL_PASSWORD',
-          label: 'Password',
-          type: 'password',
-        },
-        {
-          key: 'IMAP_HOST',
-          label: 'IMAP Host',
-          type: 'text',
-          placeholder: 'imap.example.com',
-          required: false,
-          helpText: 'Optional. Leave empty for auto-detection.',
-        },
-      ]
-      renderFields(extraContainer, fields)
-      dynamicFields = fields
-      submitBtn.disabled = false
+    })
+
+    return card
+  }
+
+  function updateAccountNumbers() {
+    const cards = fieldsContainer.querySelectorAll('.account-card')
+    cards.forEach((card, i) => {
+      card.querySelector('strong').textContent = `Account ${i + 1}`
+    })
+  }
+
+  function collectAccounts() {
+    const cards = fieldsContainer.querySelectorAll('.account-card')
+    const accounts = []
+    for (const card of cards) {
+      const idx = card.dataset.idx
+      const emailInput = card.querySelector('input[type="email"]')
+      const email = emailInput?.value?.trim()
+      if (!email) continue
+
+      const domain = email.split('@')[1]?.toLowerCase()
+      if (OAUTH_DOMAINS.includes(domain)) {
+        accounts.push({ email, auth: 'oauth2' })
+      } else {
+        const passInput = card.querySelector(`#password_${idx}`)
+        const password = passInput?.value
+        if (!password) continue
+        const imapInput = card.querySelector(`#imap_${idx}`)
+        const imapHost = imapInput?.value?.trim()
+        accounts.push({ email, password, imapHost })
+      }
     }
+    return accounts
+  }
+
+  // Add first account
+  fieldsContainer.appendChild(createAccountCard(accountIndex++))
+
+  // Add Account button
+  const addBtn = document.createElement('button')
+  addBtn.type = 'button'
+  addBtn.textContent = '+ Add Another Account'
+  addBtn.style.cssText =
+    'background: #2980b9; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; margin-bottom: 16px; width: 100%;'
+  addBtn.addEventListener('click', () => {
+    fieldsContainer.insertBefore(createAccountCard(accountIndex++), addBtn)
   })
+  fieldsContainer.appendChild(addBtn)
 
   document.getElementById('setup-form').addEventListener('submit', async (e) => {
     e.preventDefault()
@@ -123,22 +182,19 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
     submitBtn.textContent = 'Encrypting...'
 
     try {
-      const config = {}
-
-      // Collect email address
-      const emailVal = document.getElementById('EMAIL_ADDRESS')?.value
-      if (emailVal) config.EMAIL_ADDRESS = emailVal
-
-      // Collect dynamic fields
-      for (const field of dynamicFields) {
-        if (field.value) {
-          // Hidden field (like AUTH_METHOD=oauth2)
-          config[field.key] = field.value
-        } else {
-          const input = document.getElementById(field.key)
-          if (input?.value) config[field.key] = input.value
-        }
+      const accounts = collectAccounts()
+      if (accounts.length === 0) {
+        throw new Error('Please add at least one email account')
       }
+
+      // Format as EMAIL_CREDENTIALS: email1:pass1,email2:pass2:imap_host
+      const parts = accounts.map((a) => {
+        if (a.auth === 'oauth2') return a.email
+        if (a.imapHost) return `${a.email}:${a.password}:${a.imapHost}`
+        return `${a.email}:${a.password}`
+      })
+
+      const config = { EMAIL_CREDENTIALS: parts.join(',') }
 
       const cliPubKey = await importPublicKey(cliPubKeyB64)
       const browserKeyPair = await generateKeyPair()
@@ -152,7 +208,7 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
       if (ok) {
         showStatus(
           document.getElementById('status-container'),
-          'Setup complete! You can close this page.',
+          `Setup complete! ${accounts.length} account(s) configured. You can close this page.`,
           'success'
         )
         document.getElementById('setup-form').style.display = 'none'
