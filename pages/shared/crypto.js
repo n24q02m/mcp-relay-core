@@ -63,5 +63,9 @@ function toBase64url(uint8) {
 function fromBase64url(base64url) {
   const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/')
   const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4)
-  return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0))
+  try {
+    return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0))
+  } catch (e) {
+    throw new Error(`atob debug: input="${base64url}" converted="${padded}" len=${padded.length} err=${e.message}`)
+  }
 }
