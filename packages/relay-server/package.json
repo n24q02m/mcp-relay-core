@@ -1,6 +1,6 @@
 {
   "name": "@n24q02m/mcp-relay-server",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Zero-config MCP credential relay server — ECDH P-256 + AES-256-GCM, rate-limited, zero-knowledge",
   "keywords": ["mcp", "relay", "server", "credentials", "encryption", "zero-knowledge"],
   "author": {
