@@ -10,6 +10,7 @@ export interface Session {
   serverName: string
   schema: unknown
   result: SessionResult | null
+  skipped: boolean
   createdAt: number
   sourceIp: string
 }
@@ -41,6 +42,7 @@ export function createSession(id: string, serverName: string, schema: unknown, s
     serverName,
     schema,
     result: null,
+    skipped: false,
     createdAt: Date.now(),
     sourceIp
   }
@@ -52,7 +54,17 @@ export function setSessionResult(id: string, result: SessionResult): boolean {
   const session = getSession(id)
   if (!session) return false
   if (session.result !== null) return false
+  if (session.skipped) return false
   session.result = result
+  return true
+}
+
+export function skipSession(id: string): boolean {
+  const session = getSession(id)
+  if (!session) return false
+  if (session.result !== null) return false
+  if (session.skipped) return false
+  session.skipped = true
   return true
 }
 

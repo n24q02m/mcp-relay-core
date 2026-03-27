@@ -57,7 +57,17 @@ export async function pollForResult(
   while (Date.now() < deadline) {
     const response = await fetch(`${relayBaseUrl}/api/sessions/${session.sessionId}`)
     if (response.status === 200) {
-      const { browserPub, ciphertext, iv, tag } = await response.json()
+      const body = await response.json()
+
+      if (body.status === 'skipped') {
+        // Cleanup session
+        await fetch(`${relayBaseUrl}/api/sessions/${session.sessionId}`, {
+          method: 'DELETE',
+        }).catch(() => {})
+        throw new Error('RELAY_SKIPPED')
+      }
+
+      const { browserPub, ciphertext, iv, tag } = body
 
       const browserKey = await importPublicKey(browserPub)
       const sharedSecret = await deriveSharedSecret(session.keyPair.privateKey, browserKey)

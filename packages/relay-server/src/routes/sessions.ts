@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express'
 import { Router } from 'express'
-import { createSession, deleteSession, getSession, setSessionResult } from '../store.js'
+import { createSession, deleteSession, getSession, setSessionResult, skipSession } from '../store.js'
 
 function paramId(req: Request): string {
   const id = req.params.id
@@ -40,6 +40,11 @@ sessionsRouter.get('/:id', (req: Request, res: Response) => {
     return
   }
 
+  if (session.skipped) {
+    res.status(200).json({ status: 'skipped' })
+    return
+  }
+
   if (session.result === null) {
     res
       .status(202)
@@ -72,6 +77,22 @@ sessionsRouter.post('/:id/result', (req: Request, res: Response) => {
   const success = setSessionResult(paramId(req), { browserPub, ciphertext, iv, tag })
   if (!success) {
     res.status(409).json({ error: 'Result already submitted' })
+    return
+  }
+
+  res.status(200).json({ ok: true })
+})
+
+sessionsRouter.post('/:id/skip', (req: Request, res: Response) => {
+  const session = getSession(paramId(req))
+  if (!session) {
+    res.status(404).json({ error: 'Session not found or expired' })
+    return
+  }
+
+  const success = skipSession(paramId(req))
+  if (!success) {
+    res.status(409).json({ error: 'Session already has a result or is already skipped' })
     return
   }
 

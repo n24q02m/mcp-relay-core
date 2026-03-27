@@ -135,6 +135,18 @@ async def poll_for_result(
 
             if response.status_code == 200:
                 body = response.json()
+
+                if body.get("status") == "skipped":
+                    # Cleanup session (best effort)
+                    try:
+                        await client.delete(
+                            f"{relay_base_url}/api/sessions/{session.session_id}"
+                        )
+                    except Exception:
+                        pass
+                    msg = "RELAY_SKIPPED"
+                    raise RuntimeError(msg)
+
                 browser_pub = import_public_key(body["browserPub"])
                 shared_secret = derive_shared_secret(session.private_key, browser_pub)
                 aes_key = derive_aes_key(shared_secret, session.passphrase)
