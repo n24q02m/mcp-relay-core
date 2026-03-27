@@ -158,13 +158,8 @@ async def poll_for_result(
 
                 plaintext = decrypt(aes_key, ciphertext, iv, tag)
 
-                # Cleanup session (best effort)
-                try:
-                    await client.delete(
-                        f"{relay_base_url}/api/sessions/{session.session_id}"
-                    )
-                except Exception:
-                    pass
+                # Don't delete session — keep alive for bidirectional messaging.
+                # Session auto-expires via TTL (10 min).
 
                 return json.loads(plaintext)
 

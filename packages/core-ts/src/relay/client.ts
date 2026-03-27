@@ -79,8 +79,8 @@ export async function pollForResult(
         new Uint8Array(Buffer.from(tag, 'base64'))
       )
 
-      // Cleanup session
-      await fetch(`${relayBaseUrl}/api/sessions/${session.sessionId}`, { method: 'DELETE' }).catch(() => {})
+      // Don't delete session here — keep alive for bidirectional messaging.
+      // Session auto-expires via TTL (10 min). Caller can delete manually if needed.
 
       return JSON.parse(plaintext)
     }
