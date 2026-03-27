@@ -4,7 +4,6 @@ dist/
 *.tgz
 .env
 .env.*
-!.env.example
 coverage/
 .nyc_output/
 __pycache__/
