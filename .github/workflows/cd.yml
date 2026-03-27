@@ -3,14 +3,6 @@ name: CD
 on:
   workflow_dispatch:
     inputs:
-      package:
-        description: "Package to release"
-        required: true
-        type: choice
-        options:
-          - core-ts
-          - core-py
-          - relay-server
       release_type:
         description: "Release type"
         required: true
@@ -25,7 +17,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: release-${{ inputs.package }}
+  group: release
   cancel-in-progress: false
 
 env:
@@ -34,11 +26,10 @@ env:
 
 jobs:
   # ============================================================================
-  # Release TypeScript (core-ts or relay-server)
+  # Semantic Release (version bump, CHANGELOG, tag, GitHub Release)
   # ============================================================================
-  release-ts:
-    if: inputs.package == 'core-ts' || inputs.package == 'relay-server'
-    name: Release TypeScript (${{ inputs.package }})
+  release:
+    name: Semantic Release
     runs-on: ubuntu-latest
     outputs:
       released: ${{ steps.release.outputs.released }}
@@ -55,6 +46,37 @@ jobs:
         with:
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
+
+      - uses: python-semantic-release/python-semantic-release@350c48fcb3ffcdfd2e0a235206bc2ecea6b69df0 # v10
+        id: release
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          prerelease: ${{ inputs.release_type == 'beta' }}
+          prerelease_token: beta
+
+      - uses: python-semantic-release/publish-action@310a9983a0ae878b29f3aac778d7c77c1db27378 # v10
+        if: steps.release.outputs.released == 'true'
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          tag: ${{ steps.release.outputs.tag }}
+
+  # ============================================================================
+  # Publish TypeScript packages to npm
+  # ============================================================================
+  publish-npm:
+    name: Publish to npm
+    needs: release
+    if: needs.release.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ needs.release.outputs.tag }}
 
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
 
@@ -65,35 +87,30 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      - name: Build package
-        run: cd packages/${{ inputs.package }} && bun run build
-
-      - name: Publish to npm
-        id: release
+      - name: Build and publish core-ts
         run: |
-          cd packages/${{ inputs.package }}
-          TAG=${{ inputs.release_type == 'beta' && 'beta' || 'latest' }}
+          cd packages/core-ts && bun run build
+          TAG=${{ needs.release.outputs.is_prerelease == 'true' && 'beta' || 'latest' }}
           npm publish --access public --no-git-checks --tag "$TAG"
-          echo "released=true" >> "$GITHUB_OUTPUT"
-          VERSION=$(node -p "require('./package.json').version")
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=${{ inputs.package }}@v$VERSION" >> "$GITHUB_OUTPUT"
-          echo "is_prerelease=${{ inputs.release_type == 'beta' && 'true' || 'false' }}" >> "$GITHUB_OUTPUT"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Build and publish relay-server
+        run: |
+          cd packages/relay-server && bun run build
+          TAG=${{ needs.release.outputs.is_prerelease == 'true' && 'beta' || 'latest' }}
+          npm publish --access public --no-git-checks --tag "$TAG"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   # ============================================================================
-  # Release Python (core-py)
+  # Publish Python package to PyPI
   # ============================================================================
-  release-py:
-    if: inputs.package == 'core-py'
-    name: Release Python
+  publish-pypi:
+    name: Publish to PyPI
+    needs: release
+    if: needs.release.outputs.released == 'true'
     runs-on: ubuntu-latest
-    outputs:
-      released: ${{ steps.release.outputs.released }}
-      tag: ${{ steps.release.outputs.tag }}
-      version: ${{ steps.release.outputs.version }}
-      is_prerelease: ${{ steps.release.outputs.is_prerelease }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2
@@ -102,24 +119,15 @@ jobs:
 
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          token: ${{ secrets.GH_PAT }}
-          fetch-depth: 0
+          ref: ${{ needs.release.outputs.tag }}
 
       - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v6
 
-      - name: Build package
-        run: cd packages/core-py && uv build
-
-      - name: Publish to PyPI
-        id: release
+      - name: Build and publish
         run: |
           cd packages/core-py
+          uv build
           uv publish
-          echo "released=true" >> "$GITHUB_OUTPUT"
-          VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=core-py@v$VERSION" >> "$GITHUB_OUTPUT"
-          echo "is_prerelease=${{ inputs.release_type == 'beta' && 'true' || 'false' }}" >> "$GITHUB_OUTPUT"
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
 
@@ -128,8 +136,8 @@ jobs:
   # ============================================================================
   build-docker:
     name: Build Docker (${{ matrix.platform }})
-    needs: release-ts
-    if: inputs.package == 'relay-server' && needs.release-ts.outputs.released == 'true'
+    needs: release
+    if: needs.release.outputs.released == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -149,7 +157,7 @@ jobs:
 
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ needs.release-ts.outputs.tag }}
+          ref: ${{ needs.release.outputs.tag }}
 
       - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
 
@@ -181,14 +189,14 @@ jobs:
         with:
           name: digest-${{ matrix.artifact }}
           path: ${{ runner.temp }}/digests/*
+          retention-days: 1
 
   # ============================================================================
   # Merge Docker Manifests
   # ============================================================================
   merge-docker:
     name: Merge Docker Manifests
-    needs: [release-ts, build-docker]
-    if: inputs.package == 'relay-server' && needs.release-ts.outputs.released == 'true'
+    needs: [release, build-docker]
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
@@ -215,8 +223,8 @@ jobs:
 
       - name: Create and push manifests
         env:
-          VERSION: ${{ needs.release-ts.outputs.version }}
-          IS_PRERELEASE: ${{ needs.release-ts.outputs.is_prerelease }}
+          VERSION: ${{ needs.release.outputs.version }}
+          IS_PRERELEASE: ${{ needs.release.outputs.is_prerelease }}
         run: |
           if [ "$IS_PRERELEASE" = "true" ]; then
             TAGS="beta ${VERSION}"
@@ -236,3 +244,15 @@ jobs:
             docker buildx imagetools create $TAG_ARGS \
               $(echo "$DIGESTS" | xargs -I{} echo "${IMAGE}@{}")
           done
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          sparse-checkout: README.md
+
+      - uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa # v5
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ secrets.DOCKERHUB_USERNAME }}/mcp-relay-server
+          short-description: ${{ github.event.repository.description }}
+          readme-filepath: ./README.md

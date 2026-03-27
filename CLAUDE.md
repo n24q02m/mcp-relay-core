@@ -42,6 +42,15 @@ bun run test:e2e               # Playwright E2E tests
 - Config file: AES-256-GCM, key = PBKDF2(machine-id + username)
 - Passphrase: 4-word Diceware (~52 bits entropy, EFF long wordlist)
 
+## Release & Deploy
+
+- Conventional Commits. Tag format: `v{version}` (config: `semantic-release.toml`)
+- CD: workflow_dispatch, chon beta/stable
+- Pipeline: PSR v10 -> npm publish (core-ts + relay-server) + PyPI publish (core-py) -> Docker multi-arch (amd64 + arm64) -> DockerHub + GHCR
+- All 3 packages share the same version, bumped simultaneously by PSR
+- Docker images: `n24q02m/mcp-relay-server`, `ghcr.io/n24q02m/mcp-relay-core/relay-server`
+- OCI VM deploy: Docker Compose + Watchtower. Port 3080, Caddy routes for subdomains
+
 ## Security
 
 - Relay server NEVER sees plaintext credentials

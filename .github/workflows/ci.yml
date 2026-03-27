@@ -92,6 +92,9 @@ jobs:
       - name: Format check with ruff
         run: cd packages/core-py && uv run ruff format --check .
 
+      - name: Type check with ty
+        run: cd packages/core-py && uv run ty check
+
       - name: Test with coverage
         run: cd packages/core-py && uv run pytest --cov --cov-report=xml
 
@@ -130,6 +133,31 @@ jobs:
 
       - name: Build relay-server
         run: cd packages/relay-server && bun run build
+
+  # ============================================================================
+  # Semgrep SAST
+  # ============================================================================
+  semgrep:
+    name: Semgrep SAST
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run Semgrep
+        run: semgrep scan --config auto --error --json --output semgrep-results.json .
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: semgrep-results
+          path: semgrep-results.json
+          retention-days: 7
 
   # ============================================================================
   # Dependency Review

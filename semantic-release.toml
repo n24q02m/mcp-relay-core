@@ -1,0 +1,12 @@
+[semantic_release]
+version_toml = ["packages/core-py/pyproject.toml:project.version"]
+version_variables = ["packages/core-ts/package.json:version", "packages/relay-server/package.json:version"]
+tag_format = "v{version}"
+commit_message = "chore(release): v{version}"
+major_on_zero = false
+
+[semantic_release.changelog]
+changelog_file = "CHANGELOG.md"
+
+[semantic_release.remote]
+type = "github"
