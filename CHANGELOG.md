@@ -2,6 +2,27 @@
 
 <!-- version list -->
 
+## v1.0.5 (2026-03-27)
+
+### Bug Fixes
+
+- **cd**: Add Docker Hub login to PSR job to avoid rate limits
+  ([`63998b3`](https://github.com/n24q02m/mcp-relay-core/commit/63998b3339fe47640047af40f4d7af6aaf73e3db))
+
+- **relay-server**: Add message/response limits per session
+  ([`867f189`](https://github.com/n24q02m/mcp-relay-core/commit/867f18943d72f05c26aced83c756d77596cd0cd0))
+
+### Chores
+
+- Remove .env.example exception from .gitignore
+  ([`796ca7b`](https://github.com/n24q02m/mcp-relay-core/commit/796ca7b107dd953189e7d702c7c4f5509830945a))
+
+### Documentation
+
+- Update CLAUDE.md with bidirectional messaging and version injection
+  ([`d4135de`](https://github.com/n24q02m/mcp-relay-core/commit/d4135deaa886579f58a5c1af79b8c0d14baab55e))
+
+
 ## v1.0.4 (2026-03-27)
 
 ### Bug Fixes
