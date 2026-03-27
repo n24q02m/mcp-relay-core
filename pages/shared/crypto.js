@@ -63,9 +63,17 @@ function toBase64url(uint8) {
 function fromBase64url(base64url) {
   const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/')
   const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4)
-  try {
-    return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0))
-  } catch (e) {
-    throw new Error(`atob debug: input="${base64url}" converted="${padded}" len=${padded.length} err=${e.message}`)
+  // Pure JS decoder — avoids browser atob quirks (Brave, etc.)
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+  const bytes = []
+  for (let i = 0; i < padded.length; i += 4) {
+    const a = chars.indexOf(padded[i])
+    const b = chars.indexOf(padded[i + 1])
+    const c = chars.indexOf(padded[i + 2])
+    const d = chars.indexOf(padded[i + 3])
+    bytes.push((a << 2) | (b >> 4))
+    if (padded[i + 2] !== '=') bytes.push(((b & 15) << 4) | (c >> 2))
+    if (padded[i + 3] !== '=') bytes.push(((c & 3) << 6) | d)
   }
+  return new Uint8Array(bytes)
 }
