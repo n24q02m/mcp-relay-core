@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.4 (2026-03-27)
+
+### Bug Fixes
+
+- **cd**: Inject npm version from PSR outputs instead of version_pattern
+  ([`1203da4`](https://github.com/n24q02m/mcp-relay-core/commit/1203da48009fbdfb7049176f53ee5d1b02a42240))
+
+
 ## v1.0.3 (2026-03-27)
 
 ### Bug Fixes
