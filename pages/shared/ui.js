@@ -69,17 +69,19 @@ export function renderMessage(container, message) {
     title.textContent = message.text
     div.appendChild(title)
 
-    if (message.data?.verification_uri) {
+    const oauthUrl = message.data?.url || message.data?.verification_uri
+    if (oauthUrl) {
       const link = document.createElement('a')
-      link.href = message.data.verification_uri
+      link.href = oauthUrl
       link.target = '_blank'
-      link.textContent = message.data.verification_uri
+      link.textContent = oauthUrl
       link.style.cssText = 'display: block; margin: 8px 0; color: #3498db;'
       div.appendChild(link)
     }
-    if (message.data?.user_code) {
+    const oauthCode = message.data?.code || message.data?.user_code
+    if (oauthCode) {
       const code = document.createElement('code')
-      code.textContent = message.data.user_code
+      code.textContent = oauthCode
       code.style.cssText = 'display: block; font-size: 1.5em; padding: 8px; background: #1a1a2e; border-radius: 4px; text-align: center; letter-spacing: 2px; user-select: all;'
       div.appendChild(code)
     }
