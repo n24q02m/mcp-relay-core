@@ -2,6 +2,17 @@
 
 <!-- version list -->
 
+## v1.0.3 (2026-03-27)
+
+### Bug Fixes
+
+- **cd**: Add config_file to PSR action + sync versions to 1.0.2
+  ([`2098246`](https://github.com/n24q02m/mcp-relay-core/commit/209824636b2cf2e0b57233cda57bbbc17e2c2789))
+
+- **ci**: Consolidate SMTP_USERNAME+PASSWORD into SMTP_CREDENTIAL
+  ([`ca49c29`](https://github.com/n24q02m/mcp-relay-core/commit/ca49c294b496a52a0e355790aa94abf38ff3102d))
+
+
 ## v1.0.2 (2026-03-27)
 
 ### Bug Fixes
