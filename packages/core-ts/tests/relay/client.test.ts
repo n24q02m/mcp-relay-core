@@ -152,9 +152,9 @@ describe('pollForResult', () => {
     const result = await pollForResult('https://relay.example.com', session, 10, 5000)
     expect(result).toEqual(credentials)
 
-    // Verify DELETE was called for cleanup
+    // Session kept alive for bidirectional messaging (no DELETE on success)
     const deleteCalls = vi.mocked(fetch).mock.calls.filter((c) => c[1]?.method === 'DELETE')
-    expect(deleteCalls).toHaveLength(1)
+    expect(deleteCalls).toHaveLength(0)
   })
 
   it('should throw on 404 (session expired)', async () => {
