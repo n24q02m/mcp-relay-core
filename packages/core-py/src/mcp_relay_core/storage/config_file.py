@@ -38,9 +38,11 @@ def _get_config_path() -> Path:
     return _DEFAULT_CONFIG_PATH
 
 
-def _get_key() -> bytes:
+def _get_key(iterations: int | None = None) -> bytes:
     machine_id = get_machine_id()
     username = get_username()
+    if iterations is not None:
+        return derive_file_key(machine_id, username, iterations)
     return derive_file_key(machine_id, username)
 
 
@@ -62,9 +64,15 @@ def _load_store() -> dict[str, Any]:
     config_path = _get_config_path()
     if not config_path.exists():
         return {"version": 1, "servers": {}}
-    key = _get_key()
     data = config_path.read_bytes()
-    json_str = decrypt_data(key, data)
+    try:
+        key = _get_key()
+        json_str = decrypt_data(key, data)
+    except Exception:
+        # Fallback to 100k for legacy configs
+        legacy_key = _get_key(100_000)
+        json_str = decrypt_data(legacy_key, data)
+
     return json.loads(json_str)
 
 
@@ -158,8 +166,13 @@ def import_config(passphrase: str, data: bytes) -> None:
     Raises:
         cryptography.exceptions.InvalidTag: If passphrase is wrong.
     """
-    key = derive_passphrase_key(passphrase)
-    json_str = decrypt_data(key, data)
+    try:
+        key = derive_passphrase_key(passphrase)
+        json_str = decrypt_data(key, data)
+    except Exception:
+        legacy_key = derive_passphrase_key(passphrase, 100_000)
+        json_str = decrypt_data(legacy_key, data)
+
     imported = json.loads(json_str)
 
     store = _load_store()

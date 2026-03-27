@@ -40,9 +40,9 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
   throw new Error('Unreachable')
 }
 
-async function getKey(): Promise<CryptoKey> {
+async function getKey(iterations?: number): Promise<CryptoKey> {
   const [machineId, username] = await Promise.all([getMachineId(), getUsername()])
-  return deriveFileKey(machineId, username)
+  return deriveFileKey(machineId, username, iterations)
 }
 
 async function loadStore(): Promise<ConfigStore> {
@@ -50,10 +50,18 @@ async function loadStore(): Promise<ConfigStore> {
   if (!existsSync(configPath)) {
     return { version: 1, servers: {} }
   }
-  const key = await getKey()
   const data = await readFile(configPath)
-  const json = await decryptData(key, data)
-  return JSON.parse(json) as ConfigStore
+
+  try {
+    const key = await getKey() // Tries default 600k
+    const json = await decryptData(key, data)
+    return JSON.parse(json) as ConfigStore
+  } catch (err) {
+    // Fall back to 100k for legacy configs
+    const legacyKey = await getKey(100_000)
+    const json = await decryptData(legacyKey, data)
+    return JSON.parse(json) as ConfigStore
+  }
 }
 
 async function saveStore(store: ConfigStore): Promise<void> {
@@ -104,8 +112,14 @@ export async function exportConfig(passphrase: string): Promise<Buffer> {
 }
 
 export async function importConfig(passphrase: string, data: Buffer): Promise<void> {
-  const key = await derivePassphraseKey(passphrase)
-  const json = await decryptData(key, data)
+  let json: string
+  try {
+    const key = await derivePassphraseKey(passphrase)
+    json = await decryptData(key, data)
+  } catch (err) {
+    const legacyKey = await derivePassphraseKey(passphrase, 100_000)
+    json = await decryptData(legacyKey, data)
+  }
   const imported = JSON.parse(json) as ConfigStore
 
   const store = await loadStore()

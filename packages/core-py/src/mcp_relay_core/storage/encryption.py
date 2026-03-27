@@ -11,36 +11,42 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 _SALT = b"mcp-relay-config"
 _EXPORT_SALT = b"mcp-relay-export"
-_PBKDF2_ITERATIONS = 100_000
+_PBKDF2_ITERATIONS = 600_000
 
 
-def derive_file_key(machine_id: str, username: str) -> bytes:
+def derive_file_key(
+    machine_id: str, username: str, iterations: int = _PBKDF2_ITERATIONS
+) -> bytes:
     """Derive AES-256 key from machine ID and username using PBKDF2.
 
     Args:
         machine_id: Machine identifier string.
         username: OS username string.
+        iterations: Number of PBKDF2 iterations.
 
     Returns:
         32-byte AES key.
     """
     key_material = f"{machine_id}:{username}".encode()
     return hashlib.pbkdf2_hmac(
-        "sha256", key_material, _SALT, _PBKDF2_ITERATIONS, dklen=32
+        "sha256", key_material, _SALT, iterations, dklen=32
     )
 
 
-def derive_passphrase_key(passphrase: str) -> bytes:
+def derive_passphrase_key(
+    passphrase: str, iterations: int = _PBKDF2_ITERATIONS
+) -> bytes:
     """Derive AES-256 key from passphrase using PBKDF2 (for export/import).
 
     Args:
         passphrase: User-provided passphrase.
+        iterations: Number of PBKDF2 iterations.
 
     Returns:
         32-byte AES key.
     """
     return hashlib.pbkdf2_hmac(
-        "sha256", passphrase.encode("utf-8"), _EXPORT_SALT, _PBKDF2_ITERATIONS, dklen=32
+        "sha256", passphrase.encode("utf-8"), _EXPORT_SALT, iterations, dklen=32
     )
 
 

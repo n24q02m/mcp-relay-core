@@ -2,9 +2,9 @@ const encoder = new TextEncoder()
 const decoder = new TextDecoder()
 
 const SALT = encoder.encode('mcp-relay-config')
-const PBKDF2_ITERATIONS = 100_000
+const PBKDF2_ITERATIONS = 600_000
 
-export async function deriveFileKey(machineId: string, username: string): Promise<CryptoKey> {
+export async function deriveFileKey(machineId: string, username: string, iterations: number = PBKDF2_ITERATIONS): Promise<CryptoKey> {
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
     encoder.encode(`${machineId}:${username}`),
@@ -13,7 +13,7 @@ export async function deriveFileKey(machineId: string, username: string): Promis
     ['deriveKey']
   )
   return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', hash: 'SHA-256', salt: SALT, iterations: PBKDF2_ITERATIONS },
+    { name: 'PBKDF2', hash: 'SHA-256', salt: SALT, iterations },
     keyMaterial,
     { name: 'AES-GCM', length: 256 },
     false,
@@ -21,10 +21,10 @@ export async function deriveFileKey(machineId: string, username: string): Promis
   )
 }
 
-export async function derivePassphraseKey(passphrase: string): Promise<CryptoKey> {
+export async function derivePassphraseKey(passphrase: string, iterations: number = PBKDF2_ITERATIONS): Promise<CryptoKey> {
   const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(passphrase), 'PBKDF2', false, ['deriveKey'])
   return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', hash: 'SHA-256', salt: encoder.encode('mcp-relay-export'), iterations: PBKDF2_ITERATIONS },
+    { name: 'PBKDF2', hash: 'SHA-256', salt: encoder.encode('mcp-relay-export'), iterations },
     keyMaterial,
     { name: 'AES-GCM', length: 256 },
     false,
