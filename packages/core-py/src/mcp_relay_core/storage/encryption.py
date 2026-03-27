@@ -28,9 +28,7 @@ def derive_file_key(
         32-byte AES key.
     """
     key_material = f"{machine_id}:{username}".encode()
-    return hashlib.pbkdf2_hmac(
-        "sha256", key_material, _SALT, iterations, dklen=32
-    )
+    return hashlib.pbkdf2_hmac("sha256", key_material, _SALT, iterations, dklen=32)
 
 
 def derive_passphrase_key(

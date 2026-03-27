@@ -56,7 +56,7 @@ async function loadStore(): Promise<ConfigStore> {
     const key = await getKey() // Tries default 600k
     const json = await decryptData(key, data)
     return JSON.parse(json) as ConfigStore
-  } catch (err) {
+  } catch (_err) {
     // Fall back to 100k for legacy configs
     const legacyKey = await getKey(100_000)
     const json = await decryptData(legacyKey, data)
@@ -116,7 +116,7 @@ export async function importConfig(passphrase: string, data: Buffer): Promise<vo
   try {
     const key = await derivePassphraseKey(passphrase)
     json = await decryptData(key, data)
-  } catch (err) {
+  } catch (_err) {
     const legacyKey = await derivePassphraseKey(passphrase, 100_000)
     json = await decryptData(legacyKey, data)
   }

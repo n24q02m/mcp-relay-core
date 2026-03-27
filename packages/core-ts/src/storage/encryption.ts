@@ -4,7 +4,11 @@ const decoder = new TextDecoder()
 const SALT = encoder.encode('mcp-relay-config')
 const PBKDF2_ITERATIONS = 600_000
 
-export async function deriveFileKey(machineId: string, username: string, iterations: number = PBKDF2_ITERATIONS): Promise<CryptoKey> {
+export async function deriveFileKey(
+  machineId: string,
+  username: string,
+  iterations: number = PBKDF2_ITERATIONS
+): Promise<CryptoKey> {
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
     encoder.encode(`${machineId}:${username}`),
@@ -21,7 +25,10 @@ export async function deriveFileKey(machineId: string, username: string, iterati
   )
 }
 
-export async function derivePassphraseKey(passphrase: string, iterations: number = PBKDF2_ITERATIONS): Promise<CryptoKey> {
+export async function derivePassphraseKey(
+  passphrase: string,
+  iterations: number = PBKDF2_ITERATIONS
+): Promise<CryptoKey> {
   const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(passphrase), 'PBKDF2', false, ['deriveKey'])
   return crypto.subtle.deriveKey(
     { name: 'PBKDF2', hash: 'SHA-256', salt: encoder.encode('mcp-relay-export'), iterations },
