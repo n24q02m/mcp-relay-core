@@ -95,6 +95,15 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
+      - name: Inject version from PSR into package.json files
+        env:
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          for pkg in packages/core-ts packages/relay-server; do
+            node -e "const f='$pkg/package.json'; const p=require('./'+f); p.version='$VERSION'; require('fs').writeFileSync(f, JSON.stringify(p, null, 2)+'\n')"
+            echo "Set $pkg version to $VERSION"
+          done
+
       - name: Build and publish core-ts
         run: |
           cd packages/core-ts && bun run build

@@ -1,9 +1,8 @@
 [semantic_release]
 version_toml = ["packages/core-py/pyproject.toml:project.version"]
-version_pattern = [
-  'packages/core-ts/package.json:"version": "(?P<version>[^"]+)"',
-  'packages/relay-server/package.json:"version": "(?P<version>[^"]+)"'
-]
+# NOTE: version_pattern for JSON doesn't work reliably with PSR v10
+# (colon in regex conflicts with filepath:pattern separator).
+# npm package versions are injected from PSR outputs in cd.yml instead.
 tag_format = "v{version}"
 commit_message = "chore(release): v{version}"
 major_on_zero = false
