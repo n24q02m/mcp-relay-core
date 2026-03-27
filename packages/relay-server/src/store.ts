@@ -32,6 +32,8 @@ export interface Session {
 const SESSION_TTL_MS = 10 * 60 * 1000 // 10 minutes
 const CLEANUP_INTERVAL_MS = 60 * 1000 // 60 seconds
 const MAX_SESSIONS_PER_IP = 5
+const MAX_MESSAGES_PER_SESSION = 50
+const MAX_RESPONSES_PER_SESSION = 50
 
 const sessions = new Map<string, Session>()
 let cleanupTimer: ReturnType<typeof setInterval> | null = null
@@ -91,6 +93,7 @@ export function deleteSession(id: string): boolean {
 export function addMessage(id: string, message: RelayMessage): boolean {
   const session = getSession(id)
   if (!session) return false
+  if (session.messages.length >= MAX_MESSAGES_PER_SESSION) return false
   session.messages.push(message)
   return true
 }
@@ -105,6 +108,7 @@ export function getMessages(id: string, afterIndex?: number): RelayMessage[] {
 export function addResponse(id: string, response: RelayResponse): boolean {
   const session = getSession(id)
   if (!session) return false
+  if (session.responses.length >= MAX_RESPONSES_PER_SESSION) return false
   session.responses.push(response)
   return true
 }
