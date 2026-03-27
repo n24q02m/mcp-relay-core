@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 # Stage 1: Build TypeScript
 FROM oven/bun:1-alpine AS builder
 WORKDIR /app
@@ -12,6 +14,9 @@ RUN cd packages/relay-server && bun run build
 
 # Stage 2: Runtime (bun for compatible node_modules resolution)
 FROM oven/bun:1-alpine
+LABEL org.opencontainers.image.source="https://github.com/n24q02m/mcp-relay-core"
+LABEL org.opencontainers.image.description="Zero-config MCP credential relay server — ECDH P-256 + AES-256-GCM, rate-limited, zero-knowledge"
+LABEL org.opencontainers.image.licenses="MIT"
 WORKDIR /app
 COPY package.json bun.lock ./
 COPY packages/core-ts/package.json packages/core-ts/
