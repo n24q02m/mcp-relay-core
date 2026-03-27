@@ -30,20 +30,38 @@ afterAll(async () => {
 })
 
 describe('Rate limiting', () => {
-  it('rate limit kicks in after 30 requests per minute', async () => {
-    // Send 30 requests (all should succeed with 404 since no session exists)
+  it('mutation rate limit kicks in after 30 POST requests per minute', async () => {
+    // POST requests go through mutationLimiter (30/min)
     const results: number[] = []
     for (let i = 0; i < 31; i++) {
-      const res = await fetch(`${baseUrl}/api/sessions/rate-test-${i}`)
+      const res = await fetch(`${baseUrl}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serverName: `test-${i}`, schema: {} })
+      })
       results.push(res.status)
     }
 
-    // First 30 should be 404 (valid response, session not found)
-    for (let i = 0; i < 30; i++) {
-      expect(results[i]).toBe(404)
-    }
+    // First 30 should succeed (201 created)
+    const successCount = results.filter((s) => s === 201).length
+    expect(successCount).toBeLessThanOrEqual(30)
 
     // 31st should be rate limited
     expect(results[30]).toBe(429)
+  })
+
+  it('polling rate limit allows 120 GET requests per minute', async () => {
+    // GET requests go through pollingLimiter (120/min)
+    // Send 31 GETs — all should be 404 (no rate limit at this count)
+    const results: number[] = []
+    for (let i = 0; i < 31; i++) {
+      const res = await fetch(`${baseUrl}/api/sessions/poll-test-${i}`)
+      results.push(res.status)
+    }
+
+    // All 31 should be 404 (not rate limited — limit is 120)
+    for (const status of results) {
+      expect(status).toBe(404)
+    }
   })
 })

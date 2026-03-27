@@ -188,7 +188,8 @@ class TestPollForResult:
                 "https://relay.example.com", session, interval_s=0.01, timeout_s=5.0
             )
             assert result == credentials
-            mock_client.delete.assert_called_once()
+            # Session kept alive for bidirectional messaging (no DELETE on success)
+            mock_client.delete.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_throws_on_404(self):
