@@ -2,6 +2,17 @@
 
 <!-- version list -->
 
+## v1.0.2 (2026-03-27)
+
+### Bug Fixes
+
+- **ci**: Replace GEMINI_API_KEY with Vertex AI WIF + remove CODECOV_TOKEN
+  ([`809c016`](https://github.com/n24q02m/mcp-relay-core/commit/809c016dbf5522eb082dfda2ae333edfb09cdd19))
+
+- **release**: Fix PSR version_pattern for JSON files + sync versions to 1.0.1
+  ([`c2dd330`](https://github.com/n24q02m/mcp-relay-core/commit/c2dd330d9c1afd71db6bd7121b7fd8ec683f30fe))
+
+
 ## v1.0.1 (2026-03-27)
 
 ### Bug Fixes
