@@ -99,14 +99,12 @@ jobs:
           cd packages/core-ts && bun run build
           TAG=${{ needs.release.outputs.is_prerelease == 'true' && 'beta' || 'latest' }}
           npm publish --provenance --access public --no-git-checks --tag "$TAG"
-        env:
 
       - name: Build and publish relay-server
         run: |
           cd packages/relay-server && bun run build
           TAG=${{ needs.release.outputs.is_prerelease == 'true' && 'beta' || 'latest' }}
           npm publish --provenance --access public --no-git-checks --tag "$TAG"
-        env:
 
   # ============================================================================
   # Publish Python package to PyPI
@@ -133,7 +131,6 @@ jobs:
           cd packages/core-py
           uv build
           uv publish
-        env:
 
   # ============================================================================
   # Build Docker (relay-server only)
