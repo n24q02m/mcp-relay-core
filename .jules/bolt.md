@@ -1,3 +1,0 @@
-## 2025-02-23 - Caching redundant OS calls for Machine ID and Username
-**Learning:** `getMachineId()` and `getUsername()` were invoking expensive OS-level commands (e.g. `ioreg`, `reg query`, `userInfo`) on every call. In operations like `readConfig()` and `writeConfig()`, which use these to perform PBKDF2 key derivation, this added substantial, avoidable overhead (~6ms per call in Node and ~2ms in Python).
-**Action:** Added module-level and global caching for `cachedMachineId` and `cachedUsername` in both TypeScript (`packages/core-ts/src/storage/machine-id.ts`) and Python (`packages/core-py/src/mcp_relay_core/storage/machine_id.py`). Next time, identify values that are immutable during a process's lifecycle and cache them early to prevent redundant I/O operations.

@@ -1,12 +1,12 @@
+export { getMachineId, getUsername } from './machine-id.js'
+export { deriveFileKey, derivePassphraseKey, encryptData, decryptData } from './encryption.js'
 export {
+  readConfig,
+  writeConfig,
   deleteConfig,
+  listConfigs,
   exportConfig,
   importConfig,
-  listConfigs,
-  readConfig,
   setConfigPath,
-  writeConfig
 } from './config-file.js'
-export { decryptData, deriveFileKey, derivePassphraseKey, encryptData } from './encryption.js'
-export { getMachineId, getUsername } from './machine-id.js'
-export { type ConfigSource, type ResolvedConfig, resolveConfig } from './resolver.js'
+export { resolveConfig, type ConfigSource, type ResolvedConfig } from './resolver.js'

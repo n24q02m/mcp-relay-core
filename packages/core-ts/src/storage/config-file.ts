@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import envPaths from 'env-paths'
-import { decryptData, deriveFileKey, derivePassphraseKey, encryptData } from './encryption.js'
+import { deriveFileKey, derivePassphraseKey, decryptData, encryptData } from './encryption.js'
 import { getMachineId, getUsername } from './machine-id.js'
 
 const paths = envPaths('mcp', { suffix: '' })
@@ -32,7 +32,9 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
     try {
       return await fn()
     } catch (err: unknown) {
-      const isLocked = err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'EBUSY'
+      const isLocked = err instanceof Error && (
+        'code' in err && (err as NodeJS.ErrnoException).code === 'EBUSY'
+      )
       if (!isLocked || attempt === MAX_RETRIES - 1) throw err
       await new Promise((r) => setTimeout(r, BASE_DELAY_MS * 2 ** attempt))
     }

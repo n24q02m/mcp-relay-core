@@ -10,31 +10,41 @@ export async function deriveFileKey(machineId: string, username: string): Promis
     encoder.encode(`${machineId}:${username}`),
     'PBKDF2',
     false,
-    ['deriveKey']
+    ['deriveKey'],
   )
   return crypto.subtle.deriveKey(
     { name: 'PBKDF2', hash: 'SHA-256', salt: SALT, iterations: PBKDF2_ITERATIONS },
     keyMaterial,
     { name: 'AES-GCM', length: 256 },
     false,
-    ['encrypt', 'decrypt']
+    ['encrypt', 'decrypt'],
   )
 }
 
 export async function derivePassphraseKey(passphrase: string): Promise<CryptoKey> {
-  const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(passphrase), 'PBKDF2', false, ['deriveKey'])
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(passphrase),
+    'PBKDF2',
+    false,
+    ['deriveKey'],
+  )
   return crypto.subtle.deriveKey(
     { name: 'PBKDF2', hash: 'SHA-256', salt: encoder.encode('mcp-relay-export'), iterations: PBKDF2_ITERATIONS },
     keyMaterial,
     { name: 'AES-GCM', length: 256 },
     false,
-    ['encrypt', 'decrypt']
+    ['encrypt', 'decrypt'],
   )
 }
 
 export async function encryptData(key: CryptoKey, plaintext: string): Promise<Buffer> {
   const iv = crypto.getRandomValues(new Uint8Array(12))
-  const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoder.encode(plaintext))
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    encoder.encode(plaintext),
+  )
   // Format: [12-byte IV][ciphertext+tag]
   return Buffer.concat([iv, Buffer.from(encrypted)])
 }
@@ -45,7 +55,7 @@ export async function decryptData(key: CryptoKey, data: Buffer): Promise<string>
   const decrypted = await crypto.subtle.decrypt(
     { name: 'AES-GCM', iv: new Uint8Array(iv) },
     key,
-    new Uint8Array(ciphertext)
+    new Uint8Array(ciphertext),
   )
   return decoder.decode(decrypted)
 }

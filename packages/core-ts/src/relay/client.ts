@@ -1,6 +1,6 @@
-import { decrypt } from '../crypto/aes.js'
-import { deriveSharedSecret, exportPublicKey, generateKeyPair, importPublicKey } from '../crypto/ecdh.js'
+import { generateKeyPair, exportPublicKey, importPublicKey, deriveSharedSecret } from '../crypto/ecdh.js'
 import { deriveAesKey } from '../crypto/kdf.js'
+import { decrypt } from '../crypto/aes.js'
 import type { RelayConfigSchema } from '../schema/types.js'
 import { WORDLIST } from './wordlist.js'
 
@@ -27,7 +27,7 @@ export interface RelaySession {
 export async function createSession(
   relayBaseUrl: string,
   serverName: string,
-  schema: RelayConfigSchema
+  schema: RelayConfigSchema,
 ): Promise<RelaySession> {
   const sessionId = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('hex')
   const keyPair = await generateKeyPair()
@@ -36,7 +36,7 @@ export async function createSession(
   const response = await fetch(`${relayBaseUrl}/api/sessions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sessionId, serverName, schema })
+    body: JSON.stringify({ sessionId, serverName, schema }),
   })
   if (!response.ok) throw new Error(`Relay session creation failed: ${response.status}`)
 
@@ -50,7 +50,7 @@ export async function pollForResult(
   relayBaseUrl: string,
   session: RelaySession,
   intervalMs = 2000,
-  timeoutMs = 600_000
+  timeoutMs = 600_000,
 ): Promise<Record<string, string>> {
   const deadline = Date.now() + timeoutMs
 
@@ -66,11 +66,13 @@ export async function pollForResult(
         aesKey,
         new Uint8Array(Buffer.from(ciphertext, 'base64')),
         new Uint8Array(Buffer.from(iv, 'base64')),
-        new Uint8Array(Buffer.from(tag, 'base64'))
+        new Uint8Array(Buffer.from(tag, 'base64')),
       )
 
       // Cleanup session
-      await fetch(`${relayBaseUrl}/api/sessions/${session.sessionId}`, { method: 'DELETE' }).catch(() => {})
+      await fetch(`${relayBaseUrl}/api/sessions/${session.sessionId}`, { method: 'DELETE' }).catch(
+        () => {},
+      )
 
       return JSON.parse(plaintext)
     }
