@@ -82,7 +82,7 @@ export function renderMessage(container, message) {
     if (oauthCode) {
       const code = document.createElement('code')
       code.textContent = oauthCode
-      code.style.cssText = 'display: block; font-size: 1.5em; padding: 8px; background: #1a1a2e; border-radius: 4px; text-align: center; letter-spacing: 2px; user-select: all;'
+      code.style.cssText = 'display: block; font-size: 1.5em; padding: 12px; background: #f0f0f0; color: #1a1a2e; border-radius: 4px; text-align: center; letter-spacing: 3px; user-select: all; font-weight: bold;'
       div.appendChild(code)
     }
   } else if (message.type === 'info') {
