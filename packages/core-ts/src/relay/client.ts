@@ -67,7 +67,7 @@ export async function pollForResult(
         throw new Error('RELAY_SKIPPED')
       }
 
-      const { browserPub, ciphertext, iv, tag } = body
+      const { browserPub, ciphertext, iv, tag } = body.result ?? body
 
       const browserKey = await importPublicKey(browserPub)
       const sharedSecret = await deriveSharedSecret(session.keyPair.privateKey, browserKey)

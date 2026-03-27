@@ -147,13 +147,14 @@ async def poll_for_result(
                     msg = "RELAY_SKIPPED"
                     raise RuntimeError(msg)
 
-                browser_pub = import_public_key(body["browserPub"])
+                result = body.get("result", body)
+                browser_pub = import_public_key(result["browserPub"])
                 shared_secret = derive_shared_secret(session.private_key, browser_pub)
                 aes_key = derive_aes_key(shared_secret, session.passphrase)
 
-                ciphertext = base64.b64decode(body["ciphertext"])
-                iv = base64.b64decode(body["iv"])
-                tag = base64.b64decode(body["tag"])
+                ciphertext = base64.b64decode(result["ciphertext"])
+                iv = base64.b64decode(result["iv"])
+                tag = base64.b64decode(result["tag"])
 
                 plaintext = decrypt(aes_key, ciphertext, iv, tag)
 
