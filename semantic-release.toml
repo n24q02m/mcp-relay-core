@@ -1,8 +1,8 @@
 [semantic_release]
 version_toml = ["packages/core-py/pyproject.toml:project.version"]
 version_pattern = [
-  "packages/core-ts/package.json:\"version\": \"{version}\"",
-  "packages/relay-server/package.json:\"version\": \"{version}\""
+  'packages/core-ts/package.json:"version": "(?P<version>[^"]+)"',
+  'packages/relay-server/package.json:"version": "(?P<version>[^"]+)"'
 ]
 tag_format = "v{version}"
 commit_message = "chore(release): v{version}"
