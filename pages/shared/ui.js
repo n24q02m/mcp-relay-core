@@ -57,6 +57,120 @@ export function renderModes(container, modes, onSelect) {
   container.appendChild(select)
 }
 
+// Render a server-pushed message in the messages container
+export function renderMessage(container, message) {
+  const div = document.createElement('div')
+  div.className = `relay-message relay-message-${message.type}`
+  div.style.cssText = 'padding: 12px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #333;'
+
+  if (message.type === 'oauth_device_code') {
+    div.style.borderColor = '#2980b9'
+    const title = document.createElement('strong')
+    title.textContent = message.text
+    div.appendChild(title)
+
+    if (message.data?.verification_uri) {
+      const link = document.createElement('a')
+      link.href = message.data.verification_uri
+      link.target = '_blank'
+      link.textContent = message.data.verification_uri
+      link.style.cssText = 'display: block; margin: 8px 0; color: #3498db;'
+      div.appendChild(link)
+    }
+    if (message.data?.user_code) {
+      const code = document.createElement('code')
+      code.textContent = message.data.user_code
+      code.style.cssText = 'display: block; font-size: 1.5em; padding: 8px; background: #1a1a2e; border-radius: 4px; text-align: center; letter-spacing: 2px; user-select: all;'
+      div.appendChild(code)
+    }
+  } else if (message.type === 'info') {
+    div.style.borderColor = '#555'
+    const text = document.createElement('p')
+    text.textContent = message.text
+    text.style.margin = '0'
+    div.appendChild(text)
+  } else if (message.type === 'complete') {
+    div.style.borderColor = '#27ae60'
+    div.style.background = 'rgba(39, 174, 96, 0.1)'
+    const text = document.createElement('p')
+    text.textContent = message.text
+    text.style.margin = '0'
+    div.appendChild(text)
+  } else if (message.type === 'error') {
+    div.style.borderColor = '#c0392b'
+    div.style.background = 'rgba(192, 57, 43, 0.1)'
+    const text = document.createElement('p')
+    text.textContent = message.text
+    text.style.margin = '0'
+    div.appendChild(text)
+  }
+
+  container.appendChild(div)
+}
+
+// Start polling for server messages after credential submit
+export function startMessagePolling(sessionId, statusContainer) {
+  const messagesContainer = document.createElement('div')
+  messagesContainer.id = 'server-messages'
+  document.body.appendChild(messagesContainer)
+
+  let lastIndex = 0
+  const pollMessages = async () => {
+    try {
+      const resp = await fetch(`/api/sessions/${sessionId}/messages?after=${lastIndex}`)
+      if (!resp.ok) return // session expired
+      const { messages } = await resp.json()
+      for (const msg of messages) {
+        if (msg.type === 'input_required') {
+          const wrapper = document.createElement('div')
+          wrapper.style.cssText = 'padding: 12px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #2980b9;'
+          const label = document.createElement('p')
+          label.textContent = msg.text
+          label.style.margin = '0 0 8px 0'
+          wrapper.appendChild(label)
+
+          const input = document.createElement('input')
+          input.type = 'text'
+          input.placeholder = msg.data?.placeholder || 'Enter value...'
+          input.style.cssText = 'width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid #555; background: #1a1a2e; color: #eee; box-sizing: border-box;'
+          wrapper.appendChild(input)
+
+          const btn = document.createElement('button')
+          btn.textContent = 'Submit'
+          btn.style.cssText = 'background: #2980b9; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer;'
+          btn.addEventListener('click', async () => {
+            await fetch(`/api/sessions/${sessionId}/responses`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ messageId: msg.id, value: input.value })
+            })
+            btn.disabled = true
+            btn.textContent = 'Sent'
+            input.disabled = true
+          })
+          wrapper.appendChild(btn)
+          messagesContainer.appendChild(wrapper)
+        } else {
+          renderMessage(messagesContainer, msg)
+        }
+
+        lastIndex++
+
+        if (msg.type === 'complete') {
+          showStatus(statusContainer, msg.text || 'Setup complete!', 'success')
+          return
+        }
+        if (msg.type === 'error') {
+          showStatus(statusContainer, msg.text, 'error')
+          return
+        }
+      }
+    } catch (e) { /* ignore */ }
+    setTimeout(pollMessages, 2000)
+  }
+  pollMessages()
+}
+
 // Show status message
 export function showStatus(container, message, type = 'info') {
   const status = document.getElementById('status') || document.createElement('div')

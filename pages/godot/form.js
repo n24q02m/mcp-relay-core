@@ -7,7 +7,7 @@ import {
   encrypt,
   exportPublicKey,
 } from '/shared/crypto.js'
-import { renderFields, showStatus } from '/shared/ui.js'
+import { renderFields, showStatus, startMessagePolling } from '/shared/ui.js'
 
 const fields = [
   {
@@ -65,12 +65,13 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
 
       const ok = await submitResult(sessionId, browserPub, ciphertext, iv, tag)
       if (ok) {
+        document.getElementById('setup-form').style.display = 'none'
         showStatus(
           document.getElementById('status-container'),
-          'Setup complete! You can close this page.',
-          'success'
+          'Credentials sent. Waiting for server...',
+          'info'
         )
-        document.getElementById('setup-form').style.display = 'none'
+        startMessagePolling(sessionId, document.getElementById('status-container'))
       } else {
         throw new Error('Failed to submit')
       }

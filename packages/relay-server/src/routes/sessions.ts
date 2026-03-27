@@ -1,6 +1,17 @@
 import type { Request, Response } from 'express'
 import { Router } from 'express'
-import { createSession, deleteSession, getSession, setSessionResult, skipSession } from '../store.js'
+import type { RelayMessage } from '../store.js'
+import {
+  addMessage,
+  addResponse,
+  createSession,
+  deleteSession,
+  getMessages,
+  getResponses,
+  getSession,
+  setSessionResult,
+  skipSession
+} from '../store.js'
 
 function paramId(req: Request): string {
   const id = req.params.id
@@ -97,6 +108,89 @@ sessionsRouter.post('/:id/skip', (req: Request, res: Response) => {
   }
 
   res.status(200).json({ ok: true })
+})
+
+// Server pushes a message to the browser
+sessionsRouter.post('/:id/messages', (req: Request, res: Response) => {
+  const { type, text, data } = req.body as {
+    type?: RelayMessage['type']
+    text?: string
+    data?: Record<string, unknown>
+  }
+
+  if (!type || !text) {
+    res.status(400).json({ error: 'type and text are required' })
+    return
+  }
+
+  const session = getSession(paramId(req))
+  if (!session) {
+    res.status(404).json({ error: 'Session not found or expired' })
+    return
+  }
+
+  const messageId = crypto.randomUUID()
+  const message: RelayMessage = { id: messageId, type, text, data }
+  const success = addMessage(paramId(req), message)
+  if (!success) {
+    res.status(404).json({ error: 'Session not found or expired' })
+    return
+  }
+
+  res.status(201).json({ id: messageId })
+})
+
+// Browser polls for messages from server
+sessionsRouter.get('/:id/messages', (req: Request, res: Response) => {
+  const session = getSession(paramId(req))
+  if (!session) {
+    res.status(404).json({ error: 'Session not found or expired' })
+    return
+  }
+
+  const after = Number.parseInt(req.query.after as string, 10)
+  const afterIndex = Number.isNaN(after) ? 0 : after
+  const messages = getMessages(paramId(req), afterIndex)
+  res.status(200).json({ messages })
+})
+
+// Browser sends a response to a message
+sessionsRouter.post('/:id/responses', (req: Request, res: Response) => {
+  const { messageId, value } = req.body as {
+    messageId?: string
+    value?: string
+  }
+
+  if (!messageId || value === undefined) {
+    res.status(400).json({ error: 'messageId and value are required' })
+    return
+  }
+
+  const session = getSession(paramId(req))
+  if (!session) {
+    res.status(404).json({ error: 'Session not found or expired' })
+    return
+  }
+
+  const success = addResponse(paramId(req), { messageId, value })
+  if (!success) {
+    res.status(404).json({ error: 'Session not found or expired' })
+    return
+  }
+
+  res.status(200).json({ ok: true })
+})
+
+// Server polls for responses from browser
+sessionsRouter.get('/:id/responses', (req: Request, res: Response) => {
+  const session = getSession(paramId(req))
+  if (!session) {
+    res.status(404).json({ error: 'Session not found or expired' })
+    return
+  }
+
+  const responses = getResponses(paramId(req))
+  res.status(200).json({ responses })
 })
 
 sessionsRouter.delete('/:id', (req: Request, res: Response) => {

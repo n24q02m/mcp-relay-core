@@ -12,7 +12,9 @@ from mcp_relay_core.relay.client import (
     RelaySession,
     create_session,
     generate_passphrase,
+    poll_for_responses,
     poll_for_result,
+    send_message,
 )
 from mcp_relay_core.storage.config_file import (
     delete_config,
@@ -35,7 +37,9 @@ __all__ = [
     "RelaySession",
     "create_session",
     "generate_passphrase",
+    "poll_for_responses",
     "poll_for_result",
+    "send_message",
     "delete_config",
     "export_config",
     "import_config",

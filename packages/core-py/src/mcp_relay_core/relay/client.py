@@ -180,3 +180,78 @@ async def poll_for_result(
 
     msg = "Relay setup timed out"
     raise RuntimeError(msg)
+
+
+async def send_message(
+    relay_base_url: str,
+    session_id: str,
+    message: dict,
+) -> str:
+    """Push a message from server to browser via the relay.
+
+    Args:
+        relay_base_url: Base URL of the relay server.
+        session_id: Active session ID.
+        message: Dict with 'type', 'text', and optional 'data'.
+
+    Returns:
+        The generated message ID.
+
+    Raises:
+        RuntimeError: If the relay returns a non-2xx status.
+    """
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{relay_base_url}/api/sessions/{session_id}/messages",
+            json=message,
+        )
+        if response.status_code >= 400:
+            msg = f"Failed to send message: {response.status_code}"
+            raise RuntimeError(msg)
+        return response.json()["id"]
+
+
+async def poll_for_responses(
+    relay_base_url: str,
+    session_id: str,
+    message_id: str,
+    interval_s: float = 2.0,
+    timeout_s: float = 300.0,
+) -> str:
+    """Poll the relay for a browser response to a specific message.
+
+    Args:
+        relay_base_url: Base URL of the relay server.
+        session_id: Active session ID.
+        message_id: The message ID to wait for a response to.
+        interval_s: Polling interval in seconds.
+        timeout_s: Total timeout in seconds.
+
+    Returns:
+        The response value string.
+
+    Raises:
+        RuntimeError: On timeout or request failure.
+    """
+    import time
+
+    deadline = time.monotonic() + timeout_s
+
+    async with httpx.AsyncClient() as client:
+        while time.monotonic() < deadline:
+            response = await client.get(
+                f"{relay_base_url}/api/sessions/{session_id}/responses"
+            )
+            if response.status_code >= 400:
+                msg = f"Failed to poll responses: {response.status_code}"
+                raise RuntimeError(msg)
+
+            body = response.json()
+            for resp in body.get("responses", []):
+                if resp.get("messageId") == message_id:
+                    return resp["value"]
+
+            await asyncio.sleep(interval_s)
+
+    msg = "Timed out waiting for response"
+    raise RuntimeError(msg)

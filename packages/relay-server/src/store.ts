@@ -5,6 +5,18 @@ export interface SessionResult {
   tag: string
 }
 
+export interface RelayMessage {
+  id: string
+  type: 'info' | 'oauth_device_code' | 'input_required' | 'complete' | 'error'
+  text: string
+  data?: Record<string, unknown>
+}
+
+export interface RelayResponse {
+  messageId: string
+  value: string
+}
+
 export interface Session {
   id: string
   serverName: string
@@ -13,6 +25,8 @@ export interface Session {
   skipped: boolean
   createdAt: number
   sourceIp: string
+  messages: RelayMessage[]
+  responses: RelayResponse[]
 }
 
 const SESSION_TTL_MS = 10 * 60 * 1000 // 10 minutes
@@ -44,7 +58,9 @@ export function createSession(id: string, serverName: string, schema: unknown, s
     result: null,
     skipped: false,
     createdAt: Date.now(),
-    sourceIp
+    sourceIp,
+    messages: [],
+    responses: []
   }
   sessions.set(id, session)
   return session
@@ -70,6 +86,33 @@ export function skipSession(id: string): boolean {
 
 export function deleteSession(id: string): boolean {
   return sessions.delete(id)
+}
+
+export function addMessage(id: string, message: RelayMessage): boolean {
+  const session = getSession(id)
+  if (!session) return false
+  session.messages.push(message)
+  return true
+}
+
+export function getMessages(id: string, afterIndex?: number): RelayMessage[] {
+  const session = getSession(id)
+  if (!session) return []
+  const start = afterIndex ?? 0
+  return session.messages.slice(start)
+}
+
+export function addResponse(id: string, response: RelayResponse): boolean {
+  const session = getSession(id)
+  if (!session) return false
+  session.responses.push(response)
+  return true
+}
+
+export function getResponses(id: string): RelayResponse[] {
+  const session = getSession(id)
+  if (!session) return []
+  return session.responses
 }
 
 function countSessionsByIp(ip: string): number {
