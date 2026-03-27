@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.1 (2026-03-27)
+
+### Bug Fixes
+
+- **cd**: Make npm publish idempotent for re-runs
+  ([`1313e1e`](https://github.com/n24q02m/mcp-relay-core/commit/1313e1e8aeac7f97e2a7ca3e6b484d15d87bb0f3))
+
+
 ## v1.0.0 (2026-03-27)
 
 ### Bug Fixes
