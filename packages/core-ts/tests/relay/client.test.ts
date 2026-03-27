@@ -1,13 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { WORDLIST } from '../../src/relay/wordlist.js'
-import { createSession, generatePassphrase, pollForResult } from '../../src/relay/client.js'
 import { encrypt } from '../../src/crypto/aes.js'
+import { deriveSharedSecret, exportPublicKey, generateKeyPair } from '../../src/crypto/ecdh.js'
 import { deriveAesKey } from '../../src/crypto/kdf.js'
-import {
-  deriveSharedSecret,
-  exportPublicKey,
-  generateKeyPair,
-} from '../../src/crypto/ecdh.js'
+import { createSession, generatePassphrase, pollForResult } from '../../src/relay/client.js'
+import { WORDLIST } from '../../src/relay/wordlist.js'
 import type { RelayConfigSchema } from '../../src/schema/types.js'
 
 describe('WORDLIST', () => {
@@ -63,12 +59,12 @@ describe('createSession', () => {
   const mockSchema: RelayConfigSchema = {
     server: 'test-server',
     displayName: 'Test Server',
-    fields: [{ key: 'token', label: 'Token', type: 'password', required: true }],
+    fields: [{ key: 'token', label: 'Token', type: 'password', required: true }]
   }
 
   beforeEach(() => {
-    vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
-      new Response(JSON.stringify({ ok: true }), { status: 201 }),
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async () => new Response(JSON.stringify({ ok: true }), { status: 201 })
     )
   })
 
@@ -105,9 +101,9 @@ describe('createSession', () => {
   it('should throw on non-ok response', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response('', { status: 500 }))
 
-    await expect(
-      createSession('https://relay.example.com', 'test-server', mockSchema),
-    ).rejects.toThrow('Relay session creation failed: 500')
+    await expect(createSession('https://relay.example.com', 'test-server', mockSchema)).rejects.toThrow(
+      'Relay session creation failed: 500'
+    )
   })
 })
 
@@ -140,9 +136,9 @@ describe('pollForResult', () => {
           browserPub,
           ciphertext: Buffer.from(ciphertext).toString('base64'),
           iv: Buffer.from(iv).toString('base64'),
-          tag: Buffer.from(tag).toString('base64'),
+          tag: Buffer.from(tag).toString('base64')
         }),
-        { status: 200 },
+        { status: 200 }
       )
     })
 
@@ -150,7 +146,7 @@ describe('pollForResult', () => {
       sessionId: 'test-session-id',
       keyPair: cliKeyPair,
       passphrase,
-      relayUrl: 'https://relay.example.com/setup?s=test-session-id',
+      relayUrl: 'https://relay.example.com/setup?s=test-session-id'
     }
 
     const result = await pollForResult('https://relay.example.com', session, 10, 5000)
@@ -169,12 +165,12 @@ describe('pollForResult', () => {
       sessionId: 'expired-session',
       keyPair,
       passphrase: 'alpha-bravo-charlie-delta',
-      relayUrl: 'https://relay.example.com/setup?s=expired-session',
+      relayUrl: 'https://relay.example.com/setup?s=expired-session'
     }
 
-    await expect(
-      pollForResult('https://relay.example.com', session, 10, 5000),
-    ).rejects.toThrow('Session expired or not found')
+    await expect(pollForResult('https://relay.example.com', session, 10, 5000)).rejects.toThrow(
+      'Session expired or not found'
+    )
   })
 
   it('should throw on unexpected status', async () => {
@@ -185,12 +181,12 @@ describe('pollForResult', () => {
       sessionId: 'error-session',
       keyPair,
       passphrase: 'alpha-bravo-charlie-delta',
-      relayUrl: 'https://relay.example.com/setup?s=error-session',
+      relayUrl: 'https://relay.example.com/setup?s=error-session'
     }
 
-    await expect(
-      pollForResult('https://relay.example.com', session, 10, 5000),
-    ).rejects.toThrow('Unexpected status: 500')
+    await expect(pollForResult('https://relay.example.com', session, 10, 5000)).rejects.toThrow(
+      'Unexpected status: 500'
+    )
   })
 
   it('should poll and timeout after deadline', async () => {
@@ -201,13 +197,11 @@ describe('pollForResult', () => {
       sessionId: 'slow-session',
       keyPair,
       passphrase: 'alpha-bravo-charlie-delta',
-      relayUrl: 'https://relay.example.com/setup?s=slow-session',
+      relayUrl: 'https://relay.example.com/setup?s=slow-session'
     }
 
     // Very short timeout + interval to test timeout path
-    await expect(
-      pollForResult('https://relay.example.com', session, 10, 50),
-    ).rejects.toThrow('Relay setup timed out')
+    await expect(pollForResult('https://relay.example.com', session, 10, 50)).rejects.toThrow('Relay setup timed out')
   })
 
   it('should poll multiple times with 202 then succeed on 200', async () => {
@@ -232,9 +226,9 @@ describe('pollForResult', () => {
           browserPub,
           ciphertext: Buffer.from(ciphertext).toString('base64'),
           iv: Buffer.from(iv).toString('base64'),
-          tag: Buffer.from(tag).toString('base64'),
+          tag: Buffer.from(tag).toString('base64')
         }),
-        { status: 200 },
+        { status: 200 }
       )
     })
 
@@ -242,7 +236,7 @@ describe('pollForResult', () => {
       sessionId: 'poll-session',
       keyPair: cliKeyPair,
       passphrase,
-      relayUrl: 'https://relay.example.com/setup?s=poll-session',
+      relayUrl: 'https://relay.example.com/setup?s=poll-session'
     }
 
     const result = await pollForResult('https://relay.example.com', session, 10, 5000)

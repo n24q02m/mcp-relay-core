@@ -45,7 +45,11 @@ export function renderModes(container, modes, onSelect) {
     btn.type = 'button'
     btn.className = 'mode-btn'
     btn.dataset.modeId = mode.id
-    btn.innerHTML = `<strong>${mode.label}</strong><br><small>${mode.description}</small>`
+    const strong = document.createElement('strong')
+    strong.textContent = mode.label
+    const small = document.createElement('small')
+    small.textContent = mode.description
+    btn.append(strong, document.createElement('br'), small)
     btn.addEventListener('click', () => {
       container.querySelectorAll('.mode-btn').forEach((b) => b.classList.remove('active'))
       btn.classList.add('active')

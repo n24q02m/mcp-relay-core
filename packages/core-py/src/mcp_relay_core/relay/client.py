@@ -10,6 +10,11 @@ from urllib.parse import quote
 import httpx
 
 from mcp_relay_core.crypto.aes import decrypt
+from cryptography.hazmat.primitives.asymmetric.ec import (
+    EllipticCurvePrivateKey,
+    EllipticCurvePublicKey,
+)
+
 from mcp_relay_core.crypto.ecdh import (
     derive_shared_secret,
     export_public_key,
@@ -48,8 +53,8 @@ class RelaySession:
     """Active relay session state."""
 
     session_id: str
-    private_key: object  # EllipticCurvePrivateKey
-    public_key: object  # EllipticCurvePublicKey
+    private_key: EllipticCurvePrivateKey
+    public_key: EllipticCurvePublicKey
     passphrase: str
     relay_url: str
 
