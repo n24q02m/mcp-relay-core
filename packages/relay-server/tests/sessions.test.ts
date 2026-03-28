@@ -41,8 +41,8 @@ describe('POST /api/sessions', () => {
     expect(body.sessionId).toBe('test-1')
   })
 
-  it('rejects after 5 sessions from the same IP (429)', async () => {
-    for (let i = 0; i < 5; i++) {
+  it('rejects after 10 sessions from the same IP (429)', async () => {
+    for (let i = 0; i < 10; i++) {
       const res = await fetch(`${baseUrl}/api/sessions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
