@@ -20,7 +20,11 @@ h2 { font-size: 1.1rem; margin-bottom: 1rem; color: #444; font-weight: normal; }
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 1rem;
+  box-sizing: border-box;
 }
+.field input[type="number"] { -moz-appearance: textfield; }
+.field input[type="number"]::-webkit-inner-spin-button,
+.field input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .field input:focus { border-color: #333; outline: none; }
 .field small { display: block; margin-top: 0.2rem; color: #666; font-size: 0.8rem; }
 .help-link { display: inline-block; margin-top: 0.2rem; font-size: 0.8rem; color: #0066cc; }
