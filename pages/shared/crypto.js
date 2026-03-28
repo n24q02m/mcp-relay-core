@@ -50,7 +50,14 @@ export async function encrypt(key, plaintext) {
 // --- Base64url helpers (browser-compatible, no Buffer) ---
 
 export function toBase64(uint8) {
-  return btoa(String.fromCharCode(...uint8))
+  // Process large arrays in chunks of 32768 bytes to avoid V8
+  // "Maximum call stack size exceeded" limits and improve memory performance
+  const CHUNK_SIZE = 32768;
+  let str = '';
+  for (let i = 0; i < uint8.length; i += CHUNK_SIZE) {
+    str += String.fromCharCode.apply(null, uint8.subarray(i, i + CHUNK_SIZE));
+  }
+  return btoa(str);
 }
 
 function toBase64url(uint8) {
