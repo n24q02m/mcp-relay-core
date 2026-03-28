@@ -1,0 +1,3 @@
+## 2024-05-24 - Dynamic Input Accessibility
+**Learning:** Dynamically created inputs for server-requested messages often use generic tags like `<p>` for labels, causing screen readers to miss the context. Proper `<label>` tags must be used instead, tightly coupled with unique `id`s.
+**Action:** When adding new input fields via JavaScript, always generate a unique ID for the `input` and explicitly link the corresponding `label` using `htmlFor`.

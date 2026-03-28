@@ -7,6 +7,17 @@ export function renderFields(container, fields) {
     const label = document.createElement('label')
     label.textContent = field.label
     label.htmlFor = field.key
+
+    const isRequired = field.required !== false
+    if (isRequired) {
+      const req = document.createElement('span')
+      req.className = 'required-indicator'
+      req.setAttribute('aria-hidden', 'true')
+      req.textContent = ' *'
+      req.style.color = '#c0392b'
+      label.appendChild(req)
+    }
+
     div.appendChild(label)
 
     const input = document.createElement('input')
@@ -14,7 +25,7 @@ export function renderFields(container, fields) {
     input.id = field.key
     input.name = field.key
     input.placeholder = field.placeholder || ''
-    input.required = field.required !== false
+    input.required = isRequired
     div.appendChild(input)
 
     if (field.helpText) {
@@ -128,14 +139,19 @@ export function startMessagePolling(sessionId, statusContainer) {
       const { messages } = await resp.json()
       for (const msg of messages) {
         if (msg.type === 'input_required') {
+          const inputId = `input-msg-${msg.id}`
           const wrapper = document.createElement('div')
           wrapper.style.cssText = 'padding: 12px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #2980b9;'
-          const label = document.createElement('p')
+          const label = document.createElement('label')
           label.textContent = msg.text
+          label.htmlFor = inputId
+          label.style.display = 'block'
           label.style.margin = '0 0 8px 0'
+          label.style.fontWeight = 'bold'
           wrapper.appendChild(label)
 
           const input = document.createElement('input')
+          input.id = inputId
           input.type = msg.data?.input_type || 'text'
           input.placeholder = msg.data?.placeholder || 'Enter value...'
           input.style.cssText = 'width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid #555; background: #1a1a2e; color: #eee; box-sizing: border-box;'
