@@ -5,10 +5,18 @@ Monorepo: core-ts (npm), core-py (PyPI), relay-server (Node.js), pages (static H
 
 ## Commands
 
-### TypeScript (root + core-ts + relay-server)
+### TypeScript (per-package)
 ```
-bun install                    # Install all TS deps
-bun run test                   # Run all TS tests (vitest)
+bun install                    # Install all TS deps (root workspace)
+
+# core-ts
+cd packages/core-ts
+bun run test                   # vitest
+bun run check                  # Biome + tsc
+
+# relay-server
+cd packages/relay-server
+bun run test                   # vitest
 bun run check                  # Biome + tsc
 ```
 
@@ -57,5 +65,5 @@ bun run test:e2e               # Playwright E2E tests
 
 - Relay server NEVER sees plaintext credentials
 - URL fragment (#k=...&p=...) never sent to server (RFC 3986)
-- Sessions: 10-min TTL, one-shot, max 5 per IP
+- Sessions: 10-min TTL, one-shot, max 10 per IP
 - Config file: encrypted at rest, key derived at runtime (never persisted)
