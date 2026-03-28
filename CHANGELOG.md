@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.8 (2026-03-28)
+
+### Bug Fixes
+
+- **pages**: Fetch form fields from session schema for wet/mnemo/notion
+  ([`fcf8b34`](https://github.com/n24q02m/mcp-relay-core/commit/fcf8b3402c343f14bab0a9b109b382de947cdde0))
+
+
 ## v1.0.7 (2026-03-28)
 
 ### Bug Fixes
