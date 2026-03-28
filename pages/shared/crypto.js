@@ -50,13 +50,7 @@ export async function encrypt(key, plaintext) {
 // --- Base64url helpers (browser-compatible, no Buffer) ---
 
 export function toBase64(uint8) {
-  let result = ''
-  const len = uint8.length
-  // 32768 is a safe chunk size for String.fromCharCode.apply in browsers
-  for (let i = 0; i < len; i += 32768) {
-    result += String.fromCharCode.apply(null, uint8.subarray(i, i + 32768))
-  }
-  return btoa(result)
+  return btoa(String.fromCharCode(...uint8))
 }
 
 function toBase64url(uint8) {
