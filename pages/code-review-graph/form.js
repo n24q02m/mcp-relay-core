@@ -9,17 +9,6 @@ import {
 } from '/shared/crypto.js'
 import { renderFields, showStatus, startMessagePolling } from '/shared/ui.js'
 
-const fields = [
-  {
-    key: 'GEMINI_API_KEY',
-    label: 'Gemini API Key',
-    type: 'password',
-    placeholder: 'AIza...',
-    helpUrl: 'https://aistudio.google.com/apikey',
-    helpText: 'Get your API key from Google AI Studio',
-  },
-]
-
 const { publicKey: cliPubKeyB64, passphrase } = parseFragment()
 const sessionId = getSessionId()
 
@@ -30,6 +19,11 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
     'error'
   )
 } else {
+  // Fetch fields from session schema (server-defined, not hardcoded)
+  const resp = await fetch(`/api/sessions/${sessionId}`)
+  const session = await resp.json()
+  const fields = session.schema?.fields || []
+
   const fieldsContainer = document.getElementById('fields')
   const submitBtn = document.getElementById('submit-btn')
 
@@ -46,6 +40,10 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
       for (const field of fields) {
         const input = document.getElementById(field.key)
         if (input?.value) config[field.key] = input.value
+      }
+
+      if (Object.keys(config).length === 0) {
+        throw new Error('Please fill in at least one API key')
       }
 
       const cliPubKey = await importPublicKey(cliPubKeyB64)
