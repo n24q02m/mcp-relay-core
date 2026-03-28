@@ -60,20 +60,32 @@ function toBase64url(uint8) {
     .replace(/=/g, '')
 }
 
+const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+const BASE64_LOOKUP = new Uint8Array(256)
+for (let i = 0; i < BASE64_CHARS.length; i++) {
+  BASE64_LOOKUP[BASE64_CHARS.charCodeAt(i)] = i
+}
+
 function fromBase64url(base64url) {
   const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/')
   const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4)
   // Pure JS decoder — avoids browser atob quirks (Brave, etc.)
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-  const bytes = []
-  for (let i = 0; i < padded.length; i += 4) {
-    const a = chars.indexOf(padded[i])
-    const b = chars.indexOf(padded[i + 1])
-    const c = chars.indexOf(padded[i + 2])
-    const d = chars.indexOf(padded[i + 3])
-    bytes.push((a << 2) | (b >> 4))
-    if (padded[i + 2] !== '=') bytes.push(((b & 15) << 4) | (c >> 2))
-    if (padded[i + 3] !== '=') bytes.push(((c & 3) << 6) | d)
+  const len = padded.length
+  let bufferLength = len * 0.75
+  if (padded[len - 1] === '=') bufferLength--
+  if (padded[len - 2] === '=') bufferLength--
+
+  const bytes = new Uint8Array(bufferLength)
+  let p = 0
+  for (let i = 0; i < len; i += 4) {
+    const a = BASE64_LOOKUP[padded.charCodeAt(i)]
+    const b = BASE64_LOOKUP[padded.charCodeAt(i + 1)]
+    const c = BASE64_LOOKUP[padded.charCodeAt(i + 2)]
+    const d = BASE64_LOOKUP[padded.charCodeAt(i + 3)]
+
+    bytes[p++] = (a << 2) | (b >> 4)
+    if (padded[i + 2] !== '=') bytes[p++] = ((b & 15) << 4) | (c >> 2)
+    if (padded[i + 3] !== '=') bytes[p++] = ((c & 3) << 6) | d
   }
-  return new Uint8Array(bytes)
+  return bytes
 }
