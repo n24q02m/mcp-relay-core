@@ -2,6 +2,28 @@
 
 <!-- version list -->
 
+## v1.1.0 (2026-03-28)
+
+### Chores
+
+- **deps**: Update dependency cryptography to v46.0.6 [security]
+  ([`c6638c8`](https://github.com/n24q02m/mcp-relay-core/commit/c6638c8010a5b7a641f86b28229d7832aa05c296))
+
+### Features
+
+- Optimize base64 decoding ([#11](https://github.com/n24q02m/mcp-relay-core/pull/11),
+  [`50becc5`](https://github.com/n24q02m/mcp-relay-core/commit/50becc5287e8ed9e2963826617cda0ea8ad22678))
+
+- Optimize base64 encoding and decoding for large payloads
+  ([#11](https://github.com/n24q02m/mcp-relay-core/pull/11),
+  [`50becc5`](https://github.com/n24q02m/mcp-relay-core/commit/50becc5287e8ed9e2963826617cda0ea8ad22678))
+
+### Testing
+
+- Update session IP limit test to match MAX_SESSIONS_PER_IP=10
+  ([`11dcf31`](https://github.com/n24q02m/mcp-relay-core/commit/11dcf31668d3d69bebe3b96969995eb9804625c6))
+
+
 ## v1.0.8 (2026-03-28)
 
 ### Bug Fixes
