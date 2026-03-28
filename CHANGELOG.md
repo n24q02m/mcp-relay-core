@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.7 (2026-03-28)
+
+### Bug Fixes
+
+- **pages**: Fetch CRG form fields from session schema instead of hardcoding
+  ([`06f4fa8`](https://github.com/n24q02m/mcp-relay-core/commit/06f4fa87d9b81acf8205cfa67157e3d4a9ef8c26))
+
+
 ## v1.0.6 (2026-03-28)
 
 ### Bug Fixes
