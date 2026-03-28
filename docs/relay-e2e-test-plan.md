@@ -185,3 +185,65 @@ Set env vars. Server PHAI dung env vars thay vi relay.
 - mnemo-mcp: local + cloud + Google Drive sync
 
 Each server needs: relay test + ALL tools + ALL actions + ALL modes + skip/timeout + persistence.
+
+### better-telegram-mcp
+| Phase | Test | Result | Notes |
+|-------|------|--------|-------|
+| 1.4 | Server startup → relay URL | PASS | URL on stderr |
+| 2.4 | Relay page UI | PASS | Bot Mode + User Mode selection |
+| 3.6 | Submit user mode credentials | PASS | Config saved, credentials decrypted |
+| 6.4 | OTP/2FA via relay | **FAIL** | Auth relay not integrated with mcp-relay-core. auth_client.py sends wrong payload to relay server (400). |
+| **E2E** | **Relay → Config → Auth → OTP** | **BLOCKED** | Need: integrate Telegram OTP into relay bidirectional messaging |
+
+**Bug**: `auth_client.py` tries to create session on mcp-relay-core with `{"phone_masked": "..."}` but relay expects `{"sessionId", "serverName", "schema"}`. Caddy routes ALL /api/sessions to mcp-relay-core, auth-relay container is orphaned.
+
+**Fix needed**: Replace auth_client.py flow with relay bidirectional messaging (type: 'input_required' for OTP, type: 'input_required' for 2FA password). Same pattern as email OAuth device code.
+
+### better-godot-mcp
+| Phase | Test | Result | Notes |
+|-------|------|--------|-------|
+| 1.3 | Server startup → relay URL | PASS | URL on stderr, Godot v4.6.1 auto-detected |
+| 5.1 | 30s timeout → fallback | PASS | "Relay setup timed out. No default project path." |
+| MCP | tools/list | PASS | 18 tools registered |
+| MCP | help tool | PASS | Returns docs |
+| **E2E** | **Relay → Timeout → Local → MCP** | **PASS** | |
+
+### better-code-review-graph
+| Phase | Test | Result | Notes |
+|-------|------|--------|-------|
+| 1.5 | Server startup | PASS | No relay triggered (local mode default) |
+| MCP | tools/list | PASS | 5 tools (graph, query, review, config, help) |
+| MCP | config.status | PASS | Local ONNX, 404 nodes, 1974 edges |
+| **E2E** | **Local mode → MCP** | **PASS** | |
+
+### wet-mcp
+| Phase | Test | Result | Notes |
+|-------|------|--------|-------|
+| 1.6 | Server startup | PASS | 30s timeout, local fallback |
+| MCP | tools/list | PASS | 6 tools (search, extract, media, help, config, setup) |
+| MCP | config.status | PASS | Qwen3Embed, 1984 libs, 657K chunks |
+| **E2E** | **Timeout → Local → MCP** | **PASS** | |
+
+### mnemo-mcp
+| Phase | Test | Result | Notes |
+|-------|------|--------|-------|
+| 1.7 | Server startup | PASS | 30s timeout, local fallback |
+| MCP | tools/list | PASS | 4 tools (memory, config, setup, help) |
+| MCP | config.status | PASS | Local Qwen3, 248 memories, vec enabled |
+| **E2E** | **Timeout → Local → MCP** | **PASS** | |
+
+## Summary
+
+| Server | Relay | MCP Protocol | Tools | Status |
+|--------|-------|--------------|-------|--------|
+| better-notion-mcp | PASS | PASS | 9 tools, API verified | **PASS** |
+| better-email-mcp | PASS | PASS | 5 tools, IMAP verified | **PASS** |
+| better-telegram-mcp | PASS (credentials) | N/A | N/A | **BLOCKED** (auth-relay not integrated) |
+| better-godot-mcp | PASS (timeout) | PASS | 18 tools | **PASS** |
+| better-code-review-graph | N/A (local default) | PASS | 5 tools | **PASS** |
+| wet-mcp | PASS (timeout) | PASS | 6 tools | **PASS** |
+| mnemo-mcp | PASS (timeout) | PASS | 4 tools | **PASS** |
+
+**Critical Bug Found**: Telegram user mode auth (OTP/2FA) not integrated with mcp-relay-core bidirectional messaging. auth_client.py sends incompatible payload to relay server.
+
+**mcp-relay-core v0.1.0 bug**: All 4 Python servers had old relay-core that couldn't parse `body.result` wrapper. Fixed by bumping to >=1.0.5.
