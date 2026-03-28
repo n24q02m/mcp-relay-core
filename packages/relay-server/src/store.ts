@@ -31,7 +31,7 @@ export interface Session {
 
 const SESSION_TTL_MS = 10 * 60 * 1000 // 10 minutes
 const CLEANUP_INTERVAL_MS = 60 * 1000 // 60 seconds
-const MAX_SESSIONS_PER_IP = 5
+const MAX_SESSIONS_PER_IP = 10
 const MAX_MESSAGES_PER_SESSION = 50
 const MAX_RESPONSES_PER_SESSION = 50
 
