@@ -2,6 +2,43 @@
 
 <!-- version list -->
 
+## v1.0.6 (2026-03-28)
+
+### Bug Fixes
+
+- Resolve CI failures — ty types, biome lint, semgrep XSS
+  ([`73be17c`](https://github.com/n24q02m/mcp-relay-core/commit/73be17c202fb98d20cb8a0940d69388d60ba70a7))
+
+- Ruff import sort + TS test for no-delete-on-success behavior
+  ([`6025661`](https://github.com/n24q02m/mcp-relay-core/commit/6025661d528472402b5389c580228f42b3ac7c9a))
+
+- Update tests for no-delete-on-success and split rate limits
+  ([`2b759ce`](https://github.com/n24q02m/mcp-relay-core/commit/2b759ce061907c09a4b6e8744a6ab6c8d5a63e42))
+
+- **pages**: Hide number input spinner/scrollbar on relay forms
+  ([`1dd5791`](https://github.com/n24q02m/mcp-relay-core/commit/1dd5791f917f9a464d75f70496f1de1201b51dbd))
+
+- **pages**: Improve input_required handling in message polling
+  ([`2b8c13a`](https://github.com/n24q02m/mcp-relay-core/commit/2b8c13ab2479f79eec1251d04f0e9e44bd53a179))
+
+- **pages**: Improve input_required UX — collapse after submit
+  ([`76fc579`](https://github.com/n24q02m/mcp-relay-core/commit/76fc5796d9451a3be009e52de0bda753887433cd))
+
+- **relay-server**: Increase max sessions per IP from 5 to 10
+  ([`5049548`](https://github.com/n24q02m/mcp-relay-core/commit/5049548996598fa456cf356756f7aadd411a0bfc))
+
+### Documentation
+
+- Add comprehensive relay audit plan
+  ([`c9bf97c`](https://github.com/n24q02m/mcp-relay-core/commit/c9bf97cd4a0c8338b0597a1c217c81fc9b572b73))
+
+- Add E2E test results for notion-mcp and email-mcp
+  ([`ee0ba3c`](https://github.com/n24q02m/mcp-relay-core/commit/ee0ba3c2a20db968394028bcbe3c280a8b6f543d))
+
+- Complete E2E test results for all 7 MCP servers
+  ([`3b6bc06`](https://github.com/n24q02m/mcp-relay-core/commit/3b6bc06f88910b925a8b77e8e168e7f176f2b5e0))
+
+
 ## v1.0.5 (2026-03-27)
 
 ### Bug Fixes
