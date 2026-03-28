@@ -9,37 +9,6 @@ import {
 } from '/shared/crypto.js'
 import { renderModes, renderFields, showStatus, startMessagePolling } from '/shared/ui.js'
 
-const schema = {
-  modes: [
-    {
-      id: 'local',
-      label: 'Local (Default)',
-      description: 'Default. Uses local ONNX embeddings + SQLite.',
-      fields: [],
-    },
-    {
-      id: 'proxy',
-      label: 'LiteLLM Proxy',
-      description: 'Connect to a LiteLLM proxy server',
-      fields: [
-        {
-          key: 'LITELLM_PROXY_URL',
-          label: 'Proxy URL',
-          type: 'url',
-          placeholder: 'https://litellm.example.com',
-        },
-        {
-          key: 'LITELLM_PROXY_KEY',
-          label: 'Proxy Key',
-          type: 'password',
-          required: false,
-          helpText: 'Optional authentication key',
-        },
-      ],
-    },
-  ],
-}
-
 const { publicKey: cliPubKeyB64, passphrase } = parseFragment()
 const sessionId = getSessionId()
 
@@ -50,17 +19,28 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
     'error'
   )
 } else {
+  // Fetch schema from session API (server-defined, not hardcoded)
+  const resp = await fetch(`/api/sessions/${sessionId}`)
+  const session = await resp.json()
+  const schema = session.schema || {}
+
   const modesContainer = document.getElementById('modes')
   const fieldsContainer = document.getElementById('fields')
   const submitBtn = document.getElementById('submit-btn')
   let currentFields = []
 
-  renderModes(modesContainer, schema.modes, (mode) => {
-    fieldsContainer.innerHTML = ''
-    currentFields = mode.fields
-    renderFields(fieldsContainer, mode.fields)
+  if (schema.modes) {
+    renderModes(modesContainer, schema.modes, (mode) => {
+      fieldsContainer.innerHTML = ''
+      currentFields = mode.fields || []
+      renderFields(fieldsContainer, mode.fields || [])
+      submitBtn.disabled = false
+    })
+  } else if (schema.fields) {
+    currentFields = schema.fields
+    renderFields(fieldsContainer, schema.fields)
     submitBtn.disabled = false
-  })
+  }
 
   document.getElementById('setup-form').addEventListener('submit', async (e) => {
     e.preventDefault()
