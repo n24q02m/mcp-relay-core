@@ -154,7 +154,11 @@ export function startMessagePolling(sessionId, statusContainer) {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ messageId: msg.id, value: input.value })
             })
-            btn.textContent = 'Sent'
+            // Collapse input, show waiting status
+            input.style.display = 'none'
+            btn.style.display = 'none'
+            label.textContent = label.textContent + ' — submitted, waiting for server...'
+            label.style.color = '#888'
           }
           btn.addEventListener('click', submitResponse)
           input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitResponse() })
