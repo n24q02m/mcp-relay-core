@@ -136,7 +136,7 @@ export function startMessagePolling(sessionId, statusContainer) {
           wrapper.appendChild(label)
 
           const input = document.createElement('input')
-          input.type = 'text'
+          input.type = msg.data?.input_type || 'text'
           input.placeholder = msg.data?.placeholder || 'Enter value...'
           input.style.cssText = 'width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid #555; background: #1a1a2e; color: #eee; box-sizing: border-box;'
           wrapper.appendChild(input)
@@ -144,17 +144,22 @@ export function startMessagePolling(sessionId, statusContainer) {
           const btn = document.createElement('button')
           btn.textContent = 'Submit'
           btn.style.cssText = 'background: #2980b9; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer;'
-          btn.addEventListener('click', async () => {
+          const submitResponse = async () => {
+            if (!input.value) return
+            btn.disabled = true
+            btn.textContent = 'Sending...'
+            input.disabled = true
             await fetch(`/api/sessions/${sessionId}/responses`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ messageId: msg.id, value: input.value })
             })
-            btn.disabled = true
             btn.textContent = 'Sent'
-            input.disabled = true
-          })
+          }
+          btn.addEventListener('click', submitResponse)
+          input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitResponse() })
           wrapper.appendChild(btn)
+          setTimeout(() => input.focus(), 100)
           messagesContainer.appendChild(wrapper)
         } else {
           renderMessage(messagesContainer, msg)
