@@ -8,9 +8,11 @@ export function createApp(): express.Express {
   const app = express()
 
   const corsOrigin = process.env.CORS_ORIGIN ?? '*'
-  app.use(helmet({
-    contentSecurityPolicy: false,
-  }))
+  app.use(
+    helmet({
+      contentSecurityPolicy: false
+    })
+  )
   app.use(cors({ origin: corsOrigin }))
   app.use(express.json({ limit: '1mb' }))
 
