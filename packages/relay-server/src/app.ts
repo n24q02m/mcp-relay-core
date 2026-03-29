@@ -1,5 +1,6 @@
 import cors from 'cors'
 import express from 'express'
+import helmet from 'helmet'
 import { mutationLimiter, pollingLimiter } from './middleware/rate-limit.js'
 import { sessionsRouter } from './routes/sessions.js'
 
@@ -7,6 +8,9 @@ export function createApp(): express.Express {
   const app = express()
 
   const corsOrigin = process.env.CORS_ORIGIN ?? '*'
+  app.use(helmet({
+    contentSecurityPolicy: false,
+  }))
   app.use(cors({ origin: corsOrigin }))
   app.use(express.json({ limit: '1mb' }))
 
