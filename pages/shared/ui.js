@@ -130,12 +130,16 @@ export function startMessagePolling(sessionId, statusContainer) {
         if (msg.type === 'input_required') {
           const wrapper = document.createElement('div')
           wrapper.style.cssText = 'padding: 12px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #2980b9;'
-          const label = document.createElement('p')
+
+          const label = document.createElement('label')
           label.textContent = msg.text
+          label.htmlFor = `input-${msg.id}`
+          label.style.display = 'block'
           label.style.margin = '0 0 8px 0'
           wrapper.appendChild(label)
 
           const input = document.createElement('input')
+          input.id = `input-${msg.id}`
           input.type = msg.data?.input_type || 'text'
           input.placeholder = msg.data?.placeholder || 'Enter value...'
           input.style.cssText = 'width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid #555; background: #1a1a2e; color: #eee; box-sizing: border-box;'
