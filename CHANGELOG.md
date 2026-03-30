@@ -2,6 +2,60 @@
 
 <!-- version list -->
 
+## v1.2.0-beta.1 (2026-03-30)
+
+### Bug Fixes
+
+- Improve accessibility of dynamically generated inputs in UI
+  ([#23](https://github.com/n24q02m/mcp-relay-core/pull/23),
+  [`b82cefe`](https://github.com/n24q02m/mcp-relay-core/commit/b82cefef3bcee35da4712753d0a8d6f33570fd67))
+
+- **ci**: Pin action SHAs, upgrade codecov v6, setup-uv v7, semgrep SHA
+  ([`b962596`](https://github.com/n24q02m/mcp-relay-core/commit/b96259642394dc4f4f2b9e26ce8fd63f4397cdd0))
+
+### Chores
+
+- Add Infisical project configuration
+  ([`d46ca15`](https://github.com/n24q02m/mcp-relay-core/commit/d46ca1589fbd3d561bb519b842d0d3e1dd161f04))
+
+- Remove godot relay page (relay removed from godot-mcp)
+  ([`693d256`](https://github.com/n24q02m/mcp-relay-core/commit/693d256c7ee3b4160a1afae159b3d69adb388c55))
+
+- **deps**: Update dependency @biomejs/biome to ^2.4.9
+  ([#15](https://github.com/n24q02m/mcp-relay-core/pull/15),
+  [`9ac7e0d`](https://github.com/n24q02m/mcp-relay-core/commit/9ac7e0d3602961cc9d5355db2f2b6607019173f7))
+
+- **deps**: Update dependency pytest to >=9.0.2
+  ([#16](https://github.com/n24q02m/mcp-relay-core/pull/16),
+  [`a4d6682`](https://github.com/n24q02m/mcp-relay-core/commit/a4d6682a0a0eb29d2f6539fc812b4bf68fb6d872))
+
+- **deps**: Update dependency pytest-asyncio to >=1.3.0
+  ([#17](https://github.com/n24q02m/mcp-relay-core/pull/17),
+  [`aa9cc3e`](https://github.com/n24q02m/mcp-relay-core/commit/aa9cc3ec77313240fd8efc5760872eaf1ad2bc5b))
+
+- **deps**: Update dependency ruff to >=0.15.8
+  ([#19](https://github.com/n24q02m/mcp-relay-core/pull/19),
+  [`7c03b51`](https://github.com/n24q02m/mcp-relay-core/commit/7c03b51630fc60868a67adf1335f75be772eb8a3))
+
+### Documentation
+
+- Fix CLAUDE.md discrepancies
+  ([`7caad84`](https://github.com/n24q02m/mcp-relay-core/commit/7caad84212b5da1f4bf4df9a006b7d11c28de42b))
+
+- Fix root-level commands and session limit in CLAUDE.md
+  ([`ef6172d`](https://github.com/n24q02m/mcp-relay-core/commit/ef6172d14a4ab752605f4851a758598ba2dd050a))
+
+### Features
+
+- Add Helmet to relay-server API for baseline security headers
+  ([#24](https://github.com/n24q02m/mcp-relay-core/pull/24),
+  [`76a3a2e`](https://github.com/n24q02m/mcp-relay-core/commit/76a3a2e7170e3fbe7298f58e956da51a5967c333))
+
+- Process large arrays in chunks for base64 encoding
+  ([#22](https://github.com/n24q02m/mcp-relay-core/pull/22),
+  [`2384686`](https://github.com/n24q02m/mcp-relay-core/commit/23846864e2c91bc19bba46ff78c4a1866bb026e8))
+
+
 ## v1.1.0 (2026-03-28)
 
 ### Chores
