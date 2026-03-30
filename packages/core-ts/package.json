@@ -76,7 +76,7 @@
     "vitest": "^4.1.0"
   },
   "engines": {
-    "node": ">=24.14.0"
+    "node": ">=24.14.1"
   },
   "packageManager": "bun@1.2.21"
 }
