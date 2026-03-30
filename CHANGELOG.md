@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.2.0-beta.2 (2026-03-30)
+
+### Bug Fixes
+
+- **relay-server**: Enable trust proxy for correct rate limiting behind reverse proxy
+  ([`f26ec1a`](https://github.com/n24q02m/mcp-relay-core/commit/f26ec1abd5b8e4af27f5241225b08c2bce29346d))
+
+
 ## v1.2.0-beta.1 (2026-03-30)
 
 ### Bug Fixes
