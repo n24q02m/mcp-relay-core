@@ -61,6 +61,10 @@ bun run test:e2e               # Playwright E2E tests
 - Docker images: `n24q02m/mcp-relay-server`, `ghcr.io/n24q02m/mcp-relay-core/relay-server`
 - OCI VM deploy: Docker Compose + Watchtower. Port 3080, Caddy routes for subdomains
 
+## Infisical
+
+- Project: `775e30bf-7fd8-467c-afd8-af254837bbfe`
+
 ## Security
 
 - Relay server NEVER sees plaintext credentials
