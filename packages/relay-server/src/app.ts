@@ -7,6 +7,9 @@ import { sessionsRouter } from './routes/sessions.js'
 export function createApp(): express.Express {
   const app = express()
 
+  // Trust proxy headers from Caddy/CF Tunnel for correct client IP in rate limiting
+  app.set('trust proxy', 1)
+
   const corsOrigin = process.env.CORS_ORIGIN ?? '*'
   app.use(
     helmet({
