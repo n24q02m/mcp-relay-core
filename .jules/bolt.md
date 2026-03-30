@@ -1,3 +1,7 @@
 ## 2024-06-25 - V8 Stack Overflow in Base64 Encoding
 **Learning:** Using `String.fromCharCode(...uint8Array)` or `String.fromCharCode.apply(null, uint8Array)` crashes with "Maximum call stack size exceeded" for large arrays (around 100k+ bytes) because JavaScript engines have hard limits on function arguments. Using `.apply` with chunks of 32768 bytes is both safe from stack overflows and significantly faster than spreading the entire array.
 **Action:** When converting large TypedArrays to strings, always process in chunks (e.g., 32768 bytes) to avoid V8 call stack limits and improve memory performance.
+
+## 2024-03-22 - O(N) iteration in Maps causes critical bottleneck
+**Learning:** Iterating through `Map.values()` using a loop (like in `countSessionsByIp`) effectively breaks the O(1) performance of a Hash Map. For 100k active sessions, what should have been a fast insertion `createSession` was taking ~43ms because it required scanning all sessions. This turns simple data insertion into a CPU-intensive bottleneck and a vector for Denial of Service.
+**Action:** Always avoid looping over all elements in a Map or Array on a critical path. If we need to filter or find counts by a property (like `sourceIp`), create and maintain secondary indexes (e.g., `sessionsByIp = new Map<string, Set<string>>()`). Ensure both indices are kept in sync with atomic helper functions during create/delete operations.

@@ -36,12 +36,25 @@ const MAX_MESSAGES_PER_SESSION = 50
 const MAX_RESPONSES_PER_SESSION = 50
 
 const sessions = new Map<string, Session>()
+const sessionsByIp = new Map<string, Set<string>>()
 let cleanupTimer: ReturnType<typeof setInterval> | null = null
+
+// Helper to perform atomic delete from both maps
+function _deleteSessionInternal(id: string, session: Session) {
+  sessions.delete(id)
+  const ipSet = sessionsByIp.get(session.sourceIp)
+  if (ipSet) {
+    ipSet.delete(id)
+    if (ipSet.size === 0) {
+      sessionsByIp.delete(session.sourceIp)
+    }
+  }
+}
 
 export function getSession(id: string): Session | undefined {
   const session = sessions.get(id)
   if (session && Date.now() - session.createdAt > SESSION_TTL_MS) {
-    sessions.delete(id)
+    _deleteSessionInternal(id, session)
     return undefined
   }
   return session
@@ -65,6 +78,14 @@ export function createSession(id: string, serverName: string, schema: unknown, s
     responses: []
   }
   sessions.set(id, session)
+
+  let ipSet = sessionsByIp.get(sourceIp)
+  if (!ipSet) {
+    ipSet = new Set()
+    sessionsByIp.set(sourceIp, ipSet)
+  }
+  ipSet.add(id)
+
   return session
 }
 
@@ -87,7 +108,12 @@ export function skipSession(id: string): boolean {
 }
 
 export function deleteSession(id: string): boolean {
-  return sessions.delete(id)
+  const session = sessions.get(id)
+  if (session) {
+    _deleteSessionInternal(id, session)
+    return true
+  }
+  return false
 }
 
 export function addMessage(id: string, message: RelayMessage): boolean {
@@ -120,13 +146,31 @@ export function getResponses(id: string): RelayResponse[] {
 }
 
 function countSessionsByIp(ip: string): number {
+  const ipSet = sessionsByIp.get(ip)
+  if (!ipSet) return 0
+
   const now = Date.now()
   let count = 0
-  for (const session of sessions.values()) {
-    if (session.sourceIp === ip && now - session.createdAt <= SESSION_TTL_MS) {
-      count++
+  // Clean up expired sessions for this IP while counting
+  for (const id of ipSet) {
+    const session = sessions.get(id)
+    if (session) {
+      if (now - session.createdAt > SESSION_TTL_MS) {
+        _deleteSessionInternal(id, session)
+      } else {
+        count++
+      }
+    } else {
+      // Clean up orphaned ID
+      ipSet.delete(id)
     }
   }
+
+  // Clean up empty set
+  if (ipSet.size === 0) {
+    sessionsByIp.delete(ip)
+  }
+
   return count
 }
 
@@ -134,7 +178,7 @@ function cleanup(): void {
   const now = Date.now()
   for (const [id, session] of sessions) {
     if (now - session.createdAt > SESSION_TTL_MS) {
-      sessions.delete(id)
+      _deleteSessionInternal(id, session)
     }
   }
 }
@@ -155,4 +199,5 @@ export function stopCleanup(): void {
 
 export function clearAllSessions(): void {
   sessions.clear()
+  sessionsByIp.clear()
 }
