@@ -3,6 +3,8 @@ import express from 'express'
 import { createApp } from './app.js'
 
 export async function startLocalRelay(pagesDir: string): Promise<{ port: number; url: string; close: () => void }> {
+  // Allow all CORS for local test relay server
+  process.env.CORS_ORIGIN = '*'
   const app = createApp()
   app.use(express.static(pagesDir))
 
