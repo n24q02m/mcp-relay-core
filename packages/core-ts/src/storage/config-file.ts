@@ -1,4 +1,3 @@
-import { existsSync } from 'node:fs'
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import envPaths from 'env-paths'
@@ -44,24 +43,25 @@ async function getKey(): Promise<CryptoKey> {
   const [machineId, username] = await Promise.all([getMachineId(), getUsername()])
   return deriveFileKey(machineId, username)
 }
-
 async function loadStore(): Promise<ConfigStore> {
   const configPath = getConfigPath()
-  if (!existsSync(configPath)) {
-    return { version: 1, servers: {} }
+  try {
+    const data = await readFile(configPath)
+    const key = await getKey()
+    const json = await decryptData(key, data)
+    return JSON.parse(json) as ConfigStore
+  } catch (err: unknown) {
+    if (err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'ENOENT') {
+      return { version: 1, servers: {} }
+    }
+    throw err
   }
-  const key = await getKey()
-  const data = await readFile(configPath)
-  const json = await decryptData(key, data)
-  return JSON.parse(json) as ConfigStore
 }
 
 async function saveStore(store: ConfigStore): Promise<void> {
   const configPath = getConfigPath()
   const dir = dirname(configPath)
-  if (!existsSync(dir)) {
-    await mkdir(dir, { recursive: true })
-  }
+  await mkdir(dir, { recursive: true })
   const key = await getKey()
   const encrypted = await encryptData(key, JSON.stringify(store))
   await withRetry(() => writeFile(configPath, encrypted))
@@ -77,15 +77,20 @@ export async function writeConfig(serverName: string, config: Record<string, str
   store.servers[serverName] = config
   await saveStore(store)
 }
-
 export async function deleteConfig(serverName: string): Promise<void> {
   const store = await loadStore()
   delete store.servers[serverName]
 
   const configPath = getConfigPath()
   if (Object.keys(store.servers).length === 0) {
-    if (existsSync(configPath)) {
+    try {
       await unlink(configPath)
+    } catch (err: unknown) {
+      if (err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'ENOENT') {
+        // Ignore
+      } else {
+        throw err
+      }
     }
   } else {
     await saveStore(store)
