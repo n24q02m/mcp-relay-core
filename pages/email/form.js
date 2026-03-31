@@ -196,16 +196,27 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
 
       const config = { EMAIL_CREDENTIALS: parts.join(',') }
 
-      const cliPubKey = await importPublicKey(cliPubKeyB64)
-      const browserKeyPair = await generateKeyPair()
-      const sharedSecret = await deriveSharedSecret(browserKeyPair.privateKey, cliPubKey)
-      const aesKey = await deriveAesKey(sharedSecret, passphrase)
+      // Step-by-step crypto with diagnostics
+      console.log('Key length (base64url):', cliPubKeyB64?.length, 'Passphrase:', passphrase ? 'SET' : 'EMPTY')
+      let cliPubKey, browserKeyPair, sharedSecret, aesKey
+      try { cliPubKey = await importPublicKey(cliPubKeyB64) } catch (e) {
+        throw new Error(`Key import failed (len=${cliPubKeyB64?.length}): ${e.name || e.message}`)
+      }
+      try { browserKeyPair = await generateKeyPair() } catch (e) {
+        throw new Error(`Key generation failed: ${e.name || e.message}`)
+      }
+      try { sharedSecret = await deriveSharedSecret(browserKeyPair.privateKey, cliPubKey) } catch (e) {
+        throw new Error(`Key exchange failed: ${e.name || e.message}`)
+      }
+      try { aesKey = await deriveAesKey(sharedSecret, passphrase) } catch (e) {
+        throw new Error(`Key derivation failed: ${e.name || e.message}`)
+      }
 
       const { ciphertext, iv, tag } = await encrypt(aesKey, JSON.stringify(config))
       const browserPub = await exportPublicKey(browserKeyPair.publicKey)
 
-      const ok = await submitResult(sessionId, browserPub, ciphertext, iv, tag)
-      if (ok) {
+      const result = await submitResult(sessionId, browserPub, ciphertext, iv, tag)
+      if (result.ok) {
         document.getElementById('setup-form').style.display = 'none'
         showStatus(
           document.getElementById('status-container'),
@@ -214,7 +225,7 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
         )
         startMessagePolling(sessionId, document.getElementById('status-container'))
       } else {
-        throw new Error('Failed to submit')
+        throw new Error(`Submit failed (${result.status}): ${result.error || 'unknown error'}`)
       }
     } catch (err) {
       const msg = err?.message || err?.name || String(err) || 'Unknown encryption error'

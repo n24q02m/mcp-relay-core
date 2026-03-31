@@ -47,16 +47,27 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
         if (input?.value) config[field.key] = input.value
       }
 
-      const cliPubKey = await importPublicKey(cliPubKeyB64)
-      const browserKeyPair = await generateKeyPair()
-      const sharedSecret = await deriveSharedSecret(browserKeyPair.privateKey, cliPubKey)
-      const aesKey = await deriveAesKey(sharedSecret, passphrase)
+      let cliPubKey
+      try { cliPubKey = await importPublicKey(cliPubKeyB64) }
+      catch (e) { throw new Error(`Key import failed (len=${cliPubKeyB64?.length}): ${e.name || e.message}`) }
+
+      let browserKeyPair
+      try { browserKeyPair = await generateKeyPair() }
+      catch (e) { throw new Error(`Key generation failed: ${e.name || e.message}`) }
+
+      let sharedSecret
+      try { sharedSecret = await deriveSharedSecret(browserKeyPair.privateKey, cliPubKey) }
+      catch (e) { throw new Error(`Key exchange failed: ${e.name || e.message}`) }
+
+      let aesKey
+      try { aesKey = await deriveAesKey(sharedSecret, passphrase) }
+      catch (e) { throw new Error(`Key derivation failed: ${e.name || e.message}`) }
 
       const { ciphertext, iv, tag } = await encrypt(aesKey, JSON.stringify(config))
       const browserPub = await exportPublicKey(browserKeyPair.publicKey)
 
-      const ok = await submitResult(sessionId, browserPub, ciphertext, iv, tag)
-      if (ok) {
+      const result = await submitResult(sessionId, browserPub, ciphertext, iv, tag)
+      if (result.ok) {
         document.getElementById('setup-form').style.display = 'none'
         showStatus(
           document.getElementById('status-container'),
@@ -65,10 +76,10 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
         )
         startMessagePolling(sessionId, document.getElementById('status-container'))
       } else {
-        throw new Error('Failed to submit')
+        throw new Error(`Submit failed (${result.status}): ${result.error || 'unknown error'}`)
       }
     } catch (err) {
-      showStatus(document.getElementById('status-container'), `Error: ${err.message}`, 'error')
+      showStatus(document.getElementById('status-container'), err.message || String(err), 'error')
       submitBtn.disabled = false
       submitBtn.textContent = 'Encrypt & Send'
     }
