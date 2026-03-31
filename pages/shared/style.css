@@ -62,10 +62,20 @@ button[type="submit"]:disabled { background: #999; cursor: not-allowed; }
 .status-success { background: #e6f4ea; color: #137333; }
 .status-error { background: #fce8e6; color: #c5221f; }
 
+.capability-info { margin-bottom: 1.5rem; padding: 1rem; border: 1px solid #ddd; border-radius: 6px; background: #f9f9f9; }
+.capability-info h3 { font-size: 0.9rem; margin-bottom: 0.8rem; color: #333; }
+.capability-row { margin-bottom: 0.6rem; }
+.capability-row strong { display: block; font-size: 0.85rem; }
+.priority-chain { display: block; font-size: 0.8rem; color: #0066cc; font-family: monospace; margin: 0.15rem 0; }
+.capability-row small { display: block; font-size: 0.75rem; color: #666; }
+
 @media (prefers-color-scheme: dark) {
   body { background: #1a1a1a; color: #e0e0e0; }
   .field input { background: #2a2a2a; border-color: #444; color: #e0e0e0; }
   .mode-btn { background: #2a2a2a; border-color: #444; color: #e0e0e0; }
   .mode-btn.active { border-color: #999; background: #333; }
   button[type="submit"] { background: #e0e0e0; color: #1a1a1a; }
+  .capability-info { background: #2a2a2a; border-color: #444; }
+  .capability-info h3 { color: #ccc; }
+  .priority-chain { color: #6db3f2; }
 }

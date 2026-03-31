@@ -61,6 +61,38 @@ export function renderModes(container, modes, onSelect) {
   container.appendChild(select)
 }
 
+// Render capability priority info from schema
+export function renderCapabilityInfo(container, capabilities) {
+  if (!capabilities || capabilities.length === 0) return
+
+  const wrapper = document.createElement('div')
+  wrapper.className = 'capability-info'
+
+  const title = document.createElement('h3')
+  title.textContent = 'How your keys are used'
+  wrapper.appendChild(title)
+
+  for (const cap of capabilities) {
+    const row = document.createElement('div')
+    row.className = 'capability-row'
+
+    const label = document.createElement('strong')
+    label.textContent = cap.label
+
+    const priority = document.createElement('span')
+    priority.className = 'priority-chain'
+    priority.textContent = cap.priority
+
+    const desc = document.createElement('small')
+    desc.textContent = cap.description
+
+    row.append(label, priority, desc)
+    wrapper.appendChild(row)
+  }
+
+  container.appendChild(wrapper)
+}
+
 // Render a server-pushed message in the messages container
 export function renderMessage(container, message) {
   const div = document.createElement('div')
