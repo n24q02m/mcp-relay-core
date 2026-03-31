@@ -7,7 +7,7 @@ import {
   encrypt,
   exportPublicKey,
 } from '/shared/crypto.js'
-import { renderModes, renderFields, showStatus, startMessagePolling } from '/shared/ui.js'
+import { renderFields, renderCapabilityInfo, showStatus, startMessagePolling } from '/shared/ui.js'
 
 const { publicKey: cliPubKeyB64, passphrase } = parseFragment()
 const sessionId = getSessionId()
@@ -19,28 +19,21 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
     'error'
   )
 } else {
-  // Fetch schema from session API (server-defined, not hardcoded)
   const resp = await fetch(`/api/sessions/${sessionId}`)
   const session = await resp.json()
   const schema = session.schema || {}
+  const fields = schema.fields || []
 
-  const modesContainer = document.getElementById('modes')
+  const capInfoContainer = document.getElementById('capability-info')
   const fieldsContainer = document.getElementById('fields')
   const submitBtn = document.getElementById('submit-btn')
-  let currentFields = []
 
-  if (schema.modes) {
-    renderModes(modesContainer, schema.modes, (mode) => {
-      fieldsContainer.innerHTML = ''
-      currentFields = mode.fields || []
-      renderFields(fieldsContainer, mode.fields || [])
-      submitBtn.disabled = false
-    })
-  } else if (schema.fields) {
-    currentFields = schema.fields
-    renderFields(fieldsContainer, schema.fields)
-    submitBtn.disabled = false
+  if (schema.capabilityInfo) {
+    renderCapabilityInfo(capInfoContainer, schema.capabilityInfo)
   }
+
+  renderFields(fieldsContainer, fields)
+  submitBtn.disabled = false
 
   document.getElementById('setup-form').addEventListener('submit', async (e) => {
     e.preventDefault()
@@ -49,7 +42,7 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
 
     try {
       const config = {}
-      for (const field of currentFields) {
+      for (const field of fields) {
         const input = document.getElementById(field.key)
         if (input?.value) config[field.key] = input.value
       }
@@ -67,7 +60,7 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
         document.getElementById('setup-form').style.display = 'none'
         showStatus(
           document.getElementById('status-container'),
-          'Credentials sent. Waiting for server...',
+          'Credentials sent. Waiting for server to complete setup...',
           'info'
         )
         startMessagePolling(sessionId, document.getElementById('status-container'))
@@ -83,20 +76,20 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
 
   const skipBtn = document.createElement('button')
   skipBtn.type = 'button'
-  skipBtn.textContent = 'Skip Setup (use defaults)'
-  skipBtn.style.cssText = 'background: transparent; color: #888; border: 1px solid #555; border-radius: 4px; padding: 8px 16px; cursor: pointer; width: 100%; margin-top: 8px;'
+  skipBtn.textContent = 'Skip (use local mode)'
+  skipBtn.style.cssText = 'background: transparent; color: #888; border: 1px solid #ccc; border-radius: 4px; padding: 8px 16px; cursor: pointer; width: 100%; margin-top: 8px;'
   skipBtn.addEventListener('click', async () => {
     skipBtn.disabled = true
     skipBtn.textContent = 'Skipping...'
     try {
       const response = await fetch(`/api/sessions/${sessionId}/skip`, { method: 'POST' })
       if (response.ok) {
-        showStatus(document.getElementById('status-container'), 'Setup skipped. Server will use default settings.', 'info')
+        showStatus(document.getElementById('status-container'), 'Setup skipped. Using local ONNX models.', 'info')
         document.getElementById('setup-form').style.display = 'none'
       }
     } catch (err) {
       skipBtn.disabled = false
-      skipBtn.textContent = 'Skip Setup (use defaults)'
+      skipBtn.textContent = 'Skip (use local mode)'
     }
   })
   document.getElementById('setup-form').appendChild(skipBtn)
