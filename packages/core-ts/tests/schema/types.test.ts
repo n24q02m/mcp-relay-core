@@ -65,7 +65,7 @@ describe('schema/types', () => {
       ]
     }
     expect(schema.modes).toHaveLength(2)
-    expect(schema.modes![0].id).toBe('bot')
+    expect(schema.modes?.[0].id).toBe('bot')
   })
 
   it('should type-check a dynamicFlow schema (Email example)', () => {
@@ -110,9 +110,9 @@ describe('schema/types', () => {
     }
 
     expect(schema.dynamicFlow).toBeDefined()
-    expect(schema.dynamicFlow!.routes).toHaveLength(2)
-    expect(schema.dynamicFlow!.routes[0].action).toBe('oauth2_device_code')
-    expect(schema.dynamicFlow!.routes[1].action).toBe('credentials')
+    expect(schema.dynamicFlow?.routes).toHaveLength(2)
+    expect(schema.dynamicFlow?.routes[0].action).toBe('oauth2_device_code')
+    expect(schema.dynamicFlow?.routes[1].action).toBe('credentials')
   })
 
   it('should type-check optional fields', () => {
@@ -123,7 +123,7 @@ describe('schema/types', () => {
       optional: [{ key: 'workspace_id', label: 'Workspace ID', type: 'text', helpText: 'Optional filter' }]
     }
     expect(schema.optional).toHaveLength(1)
-    expect(schema.optional![0].required).toBeUndefined()
+    expect(schema.optional?.[0].required).toBeUndefined()
   })
 
   it('should type-check ConfigMode interface', () => {
