@@ -157,6 +157,60 @@ describe('pollForResult', () => {
     expect(deleteCalls).toHaveLength(0)
   })
 
+  it('should ignore cleanup failure and return credentials on 200', async () => {
+    const cliKeyPair = await generateKeyPair()
+    const browserKeyPair = await generateKeyPair()
+    const passphrase = 'alpha-bravo-charlie-delta'
+    const sharedSecret = await deriveSharedSecret(browserKeyPair.privateKey, cliKeyPair.publicKey)
+    const aesKey = await deriveAesKey(sharedSecret, passphrase)
+    const credentials = { token: 'secret-123', api_key: 'key-456' }
+    const { ciphertext, iv, tag } = await encrypt(aesKey, JSON.stringify(credentials))
+    const browserPub = await exportPublicKey(browserKeyPair.publicKey)
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, opts) => {
+      if (opts?.method === 'DELETE') return Promise.reject(new Error('Network error'))
+      return new Response(
+        JSON.stringify({
+          browserPub,
+          ciphertext: Buffer.from(ciphertext).toString('base64'),
+          iv: Buffer.from(iv).toString('base64'),
+          tag: Buffer.from(tag).toString('base64')
+        }),
+        { status: 200 }
+      )
+    })
+
+    const session = { sessionId: 'test-session-id', keyPair: cliKeyPair, passphrase, relayUrl: '' }
+    const result = await pollForResult('https://relay.example.com', session, 10, 5000)
+    expect(result).toEqual(credentials)
+  })
+
+  it('should handle cleanup failure gracefully and throw RELAY_SKIPPED when status is skipped', async () => {
+    const cliKeyPair = await generateKeyPair()
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, opts) => {
+      if (opts?.method === 'DELETE') {
+        return Promise.reject(new Error('Network error during cleanup'))
+      }
+      return new Response(
+        JSON.stringify({
+          status: 'skipped'
+        }),
+        { status: 200 }
+      )
+    })
+
+    const session = {
+      sessionId: 'test-session-skipped',
+      keyPair: cliKeyPair,
+      passphrase: 'alpha-bravo-charlie-delta',
+      relayUrl: 'https://relay.example.com/setup?s=test-session-skipped'
+    }
+
+    await expect(pollForResult('https://relay.example.com', session, 10, 5000)).rejects.toThrow('RELAY_SKIPPED')
+    expect(fetch).toHaveBeenCalledWith('https://relay.example.com/api/sessions/test-session-skipped', { method: 'DELETE' })
+  })
+
   it('should throw on 404 (session expired)', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 404 }))
 
