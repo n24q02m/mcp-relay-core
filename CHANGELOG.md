@@ -2,6 +2,33 @@
 
 <!-- version list -->
 
+## v1.2.0-beta.3 (2026-03-31)
+
+### Chores
+
+- **deps**: Update dependency @biomejs/biome to ^2.4.10
+  ([#25](https://github.com/n24q02m/mcp-relay-core/pull/25),
+  [`b280263`](https://github.com/n24q02m/mcp-relay-core/commit/b280263aa198289498b402724828c6dd9ce6a746))
+
+- **deps**: Update vitest monorepo to ^4.1.2
+  ([#28](https://github.com/n24q02m/mcp-relay-core/pull/28),
+  [`00dc102`](https://github.com/n24q02m/mcp-relay-core/commit/00dc102297c9e3e68482c135e0aaed0c12728259))
+
+### Features
+
+- Add renderCapabilityInfo to shared UI for priority-chain display
+  ([`078e852`](https://github.com/n24q02m/mcp-relay-core/commit/078e8525b394c099fc040d71040d23eba849c72b))
+
+- **crg**: Add capability info to relay form
+  ([`51ab5db`](https://github.com/n24q02m/mcp-relay-core/commit/51ab5db8ae80ca79928a8533b34d797059dea81c))
+
+- **mnemo**: Capability-based relay form with priority info
+  ([`dc1a1fd`](https://github.com/n24q02m/mcp-relay-core/commit/dc1a1fddec0cbe73f2b43b22d1844e62d20dfc5f))
+
+- **wet**: Capability-based relay form with priority info
+  ([`fa17b06`](https://github.com/n24q02m/mcp-relay-core/commit/fa17b064b4fca2b1b892b2aca5aaf9304c74fa53))
+
+
 ## v1.2.0-beta.2 (2026-03-30)
 
 ### Bug Fixes
