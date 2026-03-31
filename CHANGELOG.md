@@ -2,6 +2,51 @@
 
 <!-- version list -->
 
+## v1.2.0 (2026-03-31)
+
+### Bug Fixes
+
+- Improve relay form error handling ([#43](https://github.com/n24q02m/mcp-relay-core/pull/43),
+  [`14a2dbf`](https://github.com/n24q02m/mcp-relay-core/commit/14a2dbf7b220402baa8e781ac91db49d8da94eb3))
+
+- Improve relay form error handling for empty error messages
+  ([#43](https://github.com/n24q02m/mcp-relay-core/pull/43),
+  [`14a2dbf`](https://github.com/n24q02m/mcp-relay-core/commit/14a2dbf7b220402baa8e781ac91db49d8da94eb3))
+
+- Improve relay page error handling and add submit retry
+  ([`8487e50`](https://github.com/n24q02m/mcp-relay-core/commit/8487e500d3f4fd52878281554b2cb274576d5c11))
+
+- Reduce static file cache from 30d to 1h, no-cache for HTML
+  ([`7aa33b3`](https://github.com/n24q02m/mcp-relay-core/commit/7aa33b398a28f0eff8e942770a43fc138cea85d0))
+
+- Remove app-level credentials from Telegram relay form
+  ([#43](https://github.com/n24q02m/mcp-relay-core/pull/43),
+  [`14a2dbf`](https://github.com/n24q02m/mcp-relay-core/commit/14a2dbf7b220402baa8e781ac91db49d8da94eb3))
+
+- Remove app-level credentials from Telegram relay form
+  ([#42](https://github.com/n24q02m/mcp-relay-core/pull/42),
+  [`f85b4cd`](https://github.com/n24q02m/mcp-relay-core/commit/f85b4cd81512b634ab6572526c218ea56857c41e))
+
+- Robust key import with validation and atob fallback
+  ([#44](https://github.com/n24q02m/mcp-relay-core/pull/44),
+  [`28dae9e`](https://github.com/n24q02m/mcp-relay-core/commit/28dae9e33bad81d7c53c9c80ac6951a2b79e7499))
+
+### Chores
+
+- Add SECURITY.md
+  ([`d2359c5`](https://github.com/n24q02m/mcp-relay-core/commit/d2359c5f5db68908c0dded6afc9e7b74e0651780))
+
+### Continuous Integration
+
+- Fix Qodo vertex_ai config, VERTEXAI_LOCATION, and renovate rules
+  ([`60dbdd0`](https://github.com/n24q02m/mcp-relay-core/commit/60dbdd00acbd43e3f92af22d64b26864cf426a9f))
+
+### Features
+
+- Make rate limits configurable via env vars
+  ([`b73a67b`](https://github.com/n24q02m/mcp-relay-core/commit/b73a67bd5e0249b1094a0ff27a1fb7f1bc916ef8))
+
+
 ## v1.2.0-beta.3 (2026-03-31)
 
 ### Chores
