@@ -30,9 +30,14 @@ export function createApp(): express.Express {
   const pagesDir = process.env.PAGES_DIR
   if (pagesDir) {
     // Short cache for JS/CSS (pages update with releases), no-cache for HTML
-    app.use(express.static(pagesDir, { maxAge: '1h', setHeaders: (res, path) => {
-      if (path.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache')
-    }}))
+    app.use(
+      express.static(pagesDir, {
+        maxAge: '1h',
+        setHeaders: (res, path) => {
+          if (path.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache')
+        }
+      })
+    )
   }
 
   return app
