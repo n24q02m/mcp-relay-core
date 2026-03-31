@@ -7,24 +7,41 @@
   "prHourlyLimit": 3,
   "labels": ["dependencies"],
   "rangeStrategy": "bump",
-  "lockFileMaintenance": { "enabled": true },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 5am"]
+  },
   "packageRules": [
     {
       "description": "Auto-merge non-major devDependencies",
       "matchDepTypes": ["devDependencies"],
       "matchUpdateTypes": ["minor", "patch"],
-      "automerge": true
+      "automerge": true,
+      "automergeType": "pr"
     },
     {
       "description": "Auto-merge patch production dependencies",
       "matchDepTypes": ["dependencies"],
       "matchUpdateTypes": ["patch"],
-      "automerge": true
+      "automerge": true,
+      "automergeType": "pr"
+    },
+    {
+      "description": "Group all non-major updates",
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "non-major dependencies",
+      "groupSlug": "non-major"
     },
     {
       "description": "Pin GitHub Actions to SHA",
       "matchManagers": ["github-actions"],
       "pinDigests": true
+    },
+    {
+      "description": "Pin PSR to v10 — block Renovate downgrades",
+      "matchPackagePatterns": ["^python-semantic-release/"],
+      "matchManagers": ["github-actions"],
+      "allowedVersions": ">=10.0.0"
     },
     {
       "description": "Pin Python to 3.13.x",
@@ -37,9 +54,14 @@
       "allowedVersions": ">=24.0.0 <25.0.0"
     },
     {
+      "description": "Pin Java runtime to 21.x LTS",
+      "matchPackageNames": ["java"],
+      "allowedVersions": ">=21.0.0 <22.0.0"
+    },
+    {
       "description": "Disable runtime updates from mise",
       "matchManagers": ["mise"],
-      "matchDepNames": ["python", "node"],
+      "matchDepNames": ["python", "node", "java"],
       "enabled": false
     }
   ]
