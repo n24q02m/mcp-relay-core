@@ -40,15 +40,9 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
   throw new Error('Unreachable')
 }
 
-let keyPromise: Promise<CryptoKey> | null = null
-
-function getKey(): Promise<CryptoKey> {
-  if (!keyPromise) {
-    keyPromise = Promise.all([getMachineId(), getUsername()]).then(([machineId, username]) =>
-      deriveFileKey(machineId, username)
-    )
-  }
-  return keyPromise
+async function getKey(): Promise<CryptoKey> {
+  const [machineId, username] = await Promise.all([getMachineId(), getUsername()])
+  return deriveFileKey(machineId, username)
 }
 
 async function loadStore(): Promise<ConfigStore> {
