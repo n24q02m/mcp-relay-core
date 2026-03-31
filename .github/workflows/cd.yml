@@ -151,11 +151,14 @@ jobs:
 
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
 
-      - name: Build and publish
-        run: |
-          cd packages/core-py
-          uv build
-          uv publish
+      - name: Build package
+        run: cd packages/core-py && uv build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: packages/core-py/dist/
+          password: ${{ secrets.PYPI_TOKEN }}
 
   # ============================================================================
   # Build Docker (relay-server only)
