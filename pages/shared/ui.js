@@ -212,7 +212,7 @@ export function startMessagePolling(sessionId, statusContainer) {
           return
         }
         if (msg.type === 'error') {
-          showStatus(statusContainer, msg.text, 'error')
+          showStatus(statusContainer, msg.text || 'Server reported an error', 'error')
           return
         }
       }
