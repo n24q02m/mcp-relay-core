@@ -32,6 +32,15 @@ sessionsRouter.post('/', (req: Request, res: Response) => {
     return
   }
 
+  // Validate schema size to prevent memory exhaustion
+  if (schema !== undefined) {
+    const schemaStr = JSON.stringify(schema)
+    if (schemaStr && schemaStr.length > 16384) {
+      res.status(413).json({ error: 'Schema is too large' })
+      return
+    }
+  }
+
   const sourceIp = req.ip ?? req.socket.remoteAddress ?? 'unknown'
   const session = createSession(sessionId, serverName, schema, sourceIp)
 
