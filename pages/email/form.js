@@ -217,7 +217,9 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
         throw new Error('Failed to submit')
       }
     } catch (err) {
-      showStatus(document.getElementById('status-container'), `Error: ${err.message}`, 'error')
+      const msg = err?.message || err?.name || String(err) || 'Unknown encryption error'
+      console.error('Relay submit error:', err)
+      showStatus(document.getElementById('status-container'), `Error: ${msg}`, 'error')
       submitBtn.disabled = false
       submitBtn.textContent = 'Encrypt & Send'
     }
