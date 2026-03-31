@@ -32,21 +32,11 @@ const schema = {
       description: 'Full account access via MTProto',
       fields: [
         {
-          key: 'TELEGRAM_API_ID',
-          label: 'API ID',
-          type: 'number',
-          helpUrl: 'https://my.telegram.org/apps',
-        },
-        {
-          key: 'TELEGRAM_API_HASH',
-          label: 'API Hash',
-          type: 'password',
-        },
-        {
           key: 'TELEGRAM_PHONE',
           label: 'Phone Number',
           type: 'tel',
           placeholder: '+84...',
+          helpText: 'API ID and API Hash are built-in. Only your phone number is needed.',
         },
       ],
     },
