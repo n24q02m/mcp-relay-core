@@ -13,7 +13,26 @@ export async function exportPublicKey(key) {
 }
 
 export async function importPublicKey(base64url) {
-  const raw = fromBase64url(base64url)
+  // Try primary decoder first, fallback to atob if it fails
+  let raw = fromBase64url(base64url)
+
+  // P-256 uncompressed key must be exactly 65 bytes starting with 0x04
+  if (raw.length !== 65 || raw[0] !== 0x04) {
+    // Try atob fallback (handles browser-specific base64 quirks)
+    try {
+      const b64 = base64url.replace(/-/g, '+').replace(/_/g, '/')
+      const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4)
+      const binary = atob(padded)
+      const fallback = new Uint8Array(binary.length)
+      for (let i = 0; i < binary.length; i++) fallback[i] = binary.charCodeAt(i)
+      if (fallback.length === 65 && fallback[0] === 0x04) raw = fallback
+    } catch { /* use original */ }
+  }
+
+  if (raw.length !== 65 || raw[0] !== 0x04) {
+    throw new Error(`Invalid key: expected 65 bytes (04||X||Y), got ${raw.length} bytes (0x${raw[0]?.toString(16)})`)
+  }
+
   return crypto.subtle.importKey('raw', raw, ALGORITHM, true, [])
 }
 
