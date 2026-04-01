@@ -7,6 +7,15 @@ export function renderFields(container, fields) {
     const label = document.createElement('label')
     label.textContent = field.label
     label.htmlFor = field.key
+
+    if (field.required !== false) {
+      const requiredIndicator = document.createElement('span')
+      requiredIndicator.textContent = ' *'
+      requiredIndicator.setAttribute('aria-hidden', 'true')
+      requiredIndicator.className = 'text-error'
+      label.appendChild(requiredIndicator)
+    }
+
     div.appendChild(label)
 
     const input = document.createElement('input')
