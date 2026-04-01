@@ -239,7 +239,8 @@ async def poll_for_responses(
     async with httpx.AsyncClient() as client:
         while time.monotonic() < deadline:
             response = await client.get(
-                f"{relay_base_url}/api/sessions/{session_id}/responses"
+                f"{relay_base_url}/api/sessions/{session_id}/responses",
+                params={"messageId": message_id},
             )
             if response.status_code >= 400:
                 msg = f"Failed to poll responses: {response.status_code}"
