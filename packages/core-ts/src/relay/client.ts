@@ -118,7 +118,9 @@ export async function pollForResponses(
   const deadline = Date.now() + timeoutMs
 
   while (Date.now() < deadline) {
-    const response = await fetch(`${relayBaseUrl}/api/sessions/${sessionId}/responses?messageId=${encodeURIComponent(messageId)}`)
+    const response = await fetch(
+      `${relayBaseUrl}/api/sessions/${sessionId}/responses?messageId=${encodeURIComponent(messageId)}`
+    )
     if (!response.ok) throw new Error(`Failed to poll responses: ${response.status}`)
 
     const body = await response.json()
