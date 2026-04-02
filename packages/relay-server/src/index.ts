@@ -9,6 +9,4 @@ const app = createApp()
 
 startCleanup()
 
-app.listen(port, () => {
-  console.log(`Relay server listening on port ${port}`)
-})
+app.listen(port)
