@@ -36,11 +36,23 @@ const MAX_MESSAGES_PER_SESSION = 50
 const MAX_RESPONSES_PER_SESSION = 50
 
 const sessions = new Map<string, Session>()
+const sessionsByIp = new Map<string, Set<string>>()
 let cleanupTimer: ReturnType<typeof setInterval> | null = null
+
+function removeFromIpIndex(ip: string, id: string): void {
+  const ids = sessionsByIp.get(ip)
+  if (ids) {
+    ids.delete(id)
+    if (ids.size === 0) {
+      sessionsByIp.delete(ip)
+    }
+  }
+}
 
 export function getSession(id: string): Session | undefined {
   const session = sessions.get(id)
   if (session && Date.now() - session.createdAt > SESSION_TTL_MS) {
+    removeFromIpIndex(session.sourceIp, id)
     sessions.delete(id)
     return undefined
   }
@@ -65,6 +77,9 @@ export function createSession(id: string, serverName: string, schema: unknown, s
     responses: []
   }
   sessions.set(id, session)
+  const ipSessions = sessionsByIp.get(sourceIp) ?? new Set()
+  ipSessions.add(id)
+  sessionsByIp.set(sourceIp, ipSessions)
   return session
 }
 
@@ -87,7 +102,12 @@ export function skipSession(id: string): boolean {
 }
 
 export function deleteSession(id: string): boolean {
-  return sessions.delete(id)
+  const session = sessions.get(id)
+  if (session) {
+    removeFromIpIndex(session.sourceIp, id)
+    return sessions.delete(id)
+  }
+  return false
 }
 
 export function addMessage(id: string, message: RelayMessage): boolean {
@@ -120,11 +140,17 @@ export function getResponses(id: string): RelayResponse[] {
 }
 
 function countSessionsByIp(ip: string): number {
+  const ids = sessionsByIp.get(ip)
+  if (!ids) return 0
   const now = Date.now()
   let count = 0
-  for (const session of sessions.values()) {
-    if (session.sourceIp === ip && now - session.createdAt <= SESSION_TTL_MS) {
+  for (const id of ids) {
+    const session = sessions.get(id)
+    if (session && now - session.createdAt <= SESSION_TTL_MS) {
       count++
+    } else {
+      removeFromIpIndex(ip, id)
+      sessions.delete(id)
     }
   }
   return count
@@ -134,6 +160,7 @@ function cleanup(): void {
   const now = Date.now()
   for (const [id, session] of sessions) {
     if (now - session.createdAt > SESSION_TTL_MS) {
+      removeFromIpIndex(session.sourceIp, id)
       sessions.delete(id)
     }
   }
@@ -155,4 +182,5 @@ export function stopCleanup(): void {
 
 export function clearAllSessions(): void {
   sessions.clear()
+  sessionsByIp.clear()
 }
