@@ -3,8 +3,8 @@
 Reads/writes ~/.config/mcp/config.enc with the same format as the TS version.
 """
 
+import asyncio
 import json
-import time
 from pathlib import Path
 from typing import Any
 
@@ -44,7 +44,7 @@ def _get_key() -> bytes:
     return derive_file_key(machine_id, username)
 
 
-def _with_retry(fn: Any) -> Any:
+async def _with_retry(fn: Any) -> Any:
     """Retry function on file busy errors."""
     for attempt in range(_MAX_RETRIES):
         try:
@@ -53,12 +53,12 @@ def _with_retry(fn: Any) -> Any:
             is_busy = getattr(err, "errno", None) in (11, 16, 35)  # EAGAIN, EBUSY, etc
             if not is_busy or attempt == _MAX_RETRIES - 1:
                 raise
-            time.sleep(_BASE_DELAY_S * (2**attempt))
+            await asyncio.sleep(_BASE_DELAY_S * (2**attempt))
     msg = "Unreachable"
     raise RuntimeError(msg)
 
 
-def _load_store() -> dict[str, Any]:
+async def _load_store() -> dict[str, Any]:
     config_path = _get_config_path()
     if not config_path.exists():
         return {"version": 1, "servers": {}}
@@ -68,7 +68,7 @@ def _load_store() -> dict[str, Any]:
     return json.loads(json_str)
 
 
-def _save_store(store: dict[str, Any]) -> None:
+async def _save_store(store: dict[str, Any]) -> None:
     config_path = _get_config_path()
     config_path.parent.mkdir(parents=True, exist_ok=True)
     key = _get_key()
@@ -77,10 +77,10 @@ def _save_store(store: dict[str, Any]) -> None:
     def _write() -> None:
         config_path.write_bytes(encrypted)
 
-    _with_retry(_write)
+    await _with_retry(_write)
 
 
-def read_config(server_name: str) -> dict[str, str] | None:
+async def read_config(server_name: str) -> dict[str, str] | None:
     """Read config for a server.
 
     Args:
@@ -89,23 +89,23 @@ def read_config(server_name: str) -> dict[str, str] | None:
     Returns:
         Config dict or None if not found.
     """
-    store = _load_store()
+    store = await _load_store()
     return store["servers"].get(server_name)
 
 
-def write_config(server_name: str, config: dict[str, str]) -> None:
+async def write_config(server_name: str, config: dict[str, str]) -> None:
     """Write config for a server (merges with existing servers).
 
     Args:
         server_name: Server identifier.
         config: Key-value config dict.
     """
-    store = _load_store()
+    store = await _load_store()
     store["servers"][server_name] = config
-    _save_store(store)
+    await _save_store(store)
 
 
-def delete_config(server_name: str) -> None:
+async def delete_config(server_name: str) -> None:
     """Delete config for a server.
 
     Removes the config file entirely if no servers remain.
@@ -113,7 +113,7 @@ def delete_config(server_name: str) -> None:
     Args:
         server_name: Server identifier.
     """
-    store = _load_store()
+    store = await _load_store()
     store["servers"].pop(server_name, None)
 
     config_path = _get_config_path()
@@ -121,20 +121,20 @@ def delete_config(server_name: str) -> None:
         if config_path.exists():
             config_path.unlink()
     else:
-        _save_store(store)
+        await _save_store(store)
 
 
-def list_configs() -> list[str]:
+async def list_configs() -> list[str]:
     """List all configured server names.
 
     Returns:
         List of server name strings.
     """
-    store = _load_store()
+    store = await _load_store()
     return list(store["servers"].keys())
 
 
-def export_config(passphrase: str) -> bytes:
+async def export_config(passphrase: str) -> bytes:
     """Export all configs encrypted with a passphrase.
 
     Args:
@@ -143,12 +143,12 @@ def export_config(passphrase: str) -> bytes:
     Returns:
         Encrypted bytes.
     """
-    store = _load_store()
+    store = await _load_store()
     key = derive_passphrase_key(passphrase)
     return encrypt_data(key, json.dumps(store))
 
 
-def import_config(passphrase: str, data: bytes) -> None:
+async def import_config(passphrase: str, data: bytes) -> None:
     """Import configs from encrypted export data, merging into local config.
 
     Args:
@@ -162,7 +162,7 @@ def import_config(passphrase: str, data: bytes) -> None:
     json_str = decrypt_data(key, data)
     imported = json.loads(json_str)
 
-    store = _load_store()
+    store = await _load_store()
     for name, config in imported["servers"].items():
         store["servers"][name] = config
-    _save_store(store)
+    await _save_store(store)
