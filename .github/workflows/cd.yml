@@ -151,11 +151,15 @@ jobs:
 
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
 
-      - name: Build and publish
+      - name: Build package
         run: |
           cd packages/core-py
           uv build
-          uv publish
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
+        with:
+          packages-dir: packages/core-py/dist/
 
   # ============================================================================
   # Build Docker (relay-server only)
