@@ -101,6 +101,9 @@ export function addMessage(id: string, message: RelayMessage): boolean {
 export function getMessages(id: string, afterIndex?: number): RelayMessage[] {
   const session = getSession(id)
   if (!session) return []
+  if (messageId) {
+    return session.responses.filter((r) => r.messageId === messageId)
+  }
   const start = afterIndex ?? 0
   return session.messages.slice(start)
 }

@@ -187,3 +187,52 @@ describe('DELETE /api/sessions/:id', () => {
     expect(getRes.status).toBe(404)
   })
 })
+
+describe('GET /api/sessions/:id/responses with filtering', () => {
+  it('filters responses by messageId', async () => {
+    const sessionId = 'filter-session-1'
+    await fetch(`${baseUrl}/api/sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId, serverName: 'telegram', schema: {} })
+    })
+
+    await fetch(`${baseUrl}/api/sessions/${sessionId}/responses`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messageId: 'm1', value: 'v1' })
+    })
+    await fetch(`${baseUrl}/api/sessions/${sessionId}/responses`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messageId: 'm2', value: 'v2' })
+    })
+
+    const res = await fetch(`${baseUrl}/api/sessions/${sessionId}/responses?messageId=m1`)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.responses).toHaveLength(1)
+    expect(body.responses[0].messageId).toBe('m1')
+    expect(body.responses[0].value).toBe('v1')
+  })
+
+  it('returns empty array if no responses match messageId', async () => {
+    const sessionId = 'filter-session-2'
+    await fetch(`${baseUrl}/api/sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId, serverName: 'telegram', schema: {} })
+    })
+
+    await fetch(`${baseUrl}/api/sessions/${sessionId}/responses`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messageId: 'm1', value: 'v1' })
+    })
+
+    const res = await fetch(`${baseUrl}/api/sessions/${sessionId}/responses?messageId=nonexistent`)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.responses).toHaveLength(0)
+  })
+})
