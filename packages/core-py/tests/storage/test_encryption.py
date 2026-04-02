@@ -79,3 +79,23 @@ class TestEncryptDecryptRoundtrip:
         encrypted = encrypt_data(key1, "secret data")
         with pytest.raises(InvalidTag):
             decrypt_data(key2, encrypted)
+
+
+class TestBackwardCompatibility:
+    def test_can_decrypt_data_encrypted_with_legacy_iterations_100k(self):
+        legacy_iterations = 100_000
+        key_legacy = derive_file_key("compat-machine", "compat-user", legacy_iterations)
+        plaintext = "legacy secret"
+        encrypted = encrypt_data(key_legacy, plaintext)
+
+        # Decrypt with current default (should fail if we use default key)
+        key_current = derive_file_key("compat-machine", "compat-user")
+        with pytest.raises(InvalidTag):
+            decrypt_data(key_current, encrypted)
+
+        # Explicitly using legacy iterations works
+        key_legacy_retry = derive_file_key(
+            "compat-machine", "compat-user", legacy_iterations
+        )
+        decrypted = decrypt_data(key_legacy_retry, encrypted)
+        assert decrypted == plaintext

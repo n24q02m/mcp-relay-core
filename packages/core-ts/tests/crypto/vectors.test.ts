@@ -3,6 +3,7 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { decrypt } from '../../src/crypto/aes.js'
 import { deriveAesKey } from '../../src/crypto/kdf.js'
+import { deriveFileKey } from '../../src/storage/encryption.js'
 
 interface CryptoVectors {
   hkdf: {
@@ -16,6 +17,12 @@ interface CryptoVectors {
     iv_hex: string
     ciphertext_hex: string
     tag_hex: string
+  }
+  pbkdf2: {
+    machine_id: string
+    username: string
+    iterations: number
+    derived_key_hex: string
   }
 }
 
@@ -59,5 +66,12 @@ describe('cross-language crypto test vectors', () => {
 
     const plaintext = await decrypt(key, ciphertext, iv, tag)
     expect(plaintext).toBe(vectors.aes_gcm.plaintext)
+  })
+
+  it('PBKDF2 derives the expected key', async () => {
+    const key = await deriveFileKey(vectors.pbkdf2.machine_id, vectors.pbkdf2.username, vectors.pbkdf2.iterations)
+    const rawKey = new Uint8Array(await crypto.subtle.exportKey('raw', key))
+    const keyHex = Buffer.from(rawKey).toString('hex')
+    expect(keyHex).toBe(vectors.pbkdf2.derived_key_hex)
   })
 })

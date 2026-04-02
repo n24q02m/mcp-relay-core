@@ -1,8 +1,9 @@
-import { mkdtemp, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { existsSync } from 'node:fs'
+import { readFile, unlink, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
+import { describe, expect, it } from 'vitest'
 import {
+  DEFAULT_CONFIG_PATH,
   deleteConfig,
   exportConfig,
   importConfig,
@@ -11,138 +12,224 @@ import {
   setConfigPath,
   writeConfig
 } from '../../src/storage/config-file.js'
+import { decryptData, deriveFileKey, encryptData } from '../../src/storage/encryption.js'
+import { getMachineId, getUsername } from '../../src/storage/machine-id.js'
 
-let tempDir: string
-
-beforeEach(async () => {
-  tempDir = await mkdtemp(join(tmpdir(), 'mcp-test-'))
-  setConfigPath(join(tempDir, 'config.enc'))
-})
-
-afterEach(async () => {
-  setConfigPath(null)
-  await rm(tempDir, { recursive: true, force: true })
-})
-
-describe('writeConfig + readConfig', () => {
+describe('config-file', () => {
   it('writes and reads a server config', async () => {
-    await writeConfig('telegram', { botToken: 'abc123', chatId: '456' })
-    const config = await readConfig('telegram')
-    expect(config).toEqual({ botToken: 'abc123', chatId: '456' })
+    const configPath = join(dirname(DEFAULT_CONFIG_PATH), 'test-config.enc')
+    setConfigPath(configPath)
+
+    await writeConfig('server1', { key1: 'val1' })
+    const config = await readConfig('server1')
+    expect(config).toEqual({ key1: 'val1' })
+
+    if (existsSync(configPath)) {
+      await unlink(configPath)
+    }
+    setConfigPath(null)
   })
 
   it('returns null for non-existent server', async () => {
-    const config = await readConfig('nonexistent')
+    const config = await readConfig('non-existent')
     expect(config).toBeNull()
   })
 
   it('returns null when no config file exists', async () => {
-    const config = await readConfig('anything')
+    const configPath = join(dirname(DEFAULT_CONFIG_PATH), 'non-existent.enc')
+    setConfigPath(configPath)
+    const config = await readConfig('any')
     expect(config).toBeNull()
+    setConfigPath(null)
   })
-})
 
-describe('writeConfig merging', () => {
   it('does not overwrite other servers sections', async () => {
-    await writeConfig('telegram', { botToken: 'tok1' })
-    await writeConfig('slack', { webhook: 'https://example.com' })
+    const configPath = join(dirname(DEFAULT_CONFIG_PATH), 'multi-test.enc')
+    setConfigPath(configPath)
 
-    const telegram = await readConfig('telegram')
-    const slack = await readConfig('slack')
-    expect(telegram).toEqual({ botToken: 'tok1' })
-    expect(slack).toEqual({ webhook: 'https://example.com' })
+    await writeConfig('srv1', { a: '1' })
+    await writeConfig('srv2', { b: '2' })
+
+    expect(await readConfig('srv1')).toEqual({ a: '1' })
+    expect(await readConfig('srv2')).toEqual({ b: '2' })
+
+    if (existsSync(configPath)) {
+      await unlink(configPath)
+    }
+    setConfigPath(null)
   })
 
   it('overwrites same server config on second write', async () => {
-    await writeConfig('telegram', { botToken: 'old' })
-    await writeConfig('telegram', { botToken: 'new', extra: 'field' })
+    const configPath = join(dirname(DEFAULT_CONFIG_PATH), 'overwrite-test.enc')
+    setConfigPath(configPath)
 
-    const config = await readConfig('telegram')
-    expect(config).toEqual({ botToken: 'new', extra: 'field' })
+    await writeConfig('srv', { v: '1' })
+    await writeConfig('srv', { v: '2' })
+    expect(await readConfig('srv')).toEqual({ v: '2' })
+
+    if (existsSync(configPath)) {
+      await unlink(configPath)
+    }
+    setConfigPath(null)
   })
-})
 
-describe('deleteConfig', () => {
   it('removes a server section', async () => {
-    await writeConfig('telegram', { botToken: 'tok' })
-    await writeConfig('slack', { webhook: 'url' })
+    const configPath = join(dirname(DEFAULT_CONFIG_PATH), 'remove-test.enc')
+    setConfigPath(configPath)
 
-    await deleteConfig('telegram')
+    await writeConfig('srv1', { a: '1' })
+    await writeConfig('srv2', { b: '2' })
+    await deleteConfig('srv1')
 
-    expect(await readConfig('telegram')).toBeNull()
-    expect(await readConfig('slack')).toEqual({ webhook: 'url' })
+    expect(await readConfig('srv1')).toBeNull()
+    expect(await readConfig('srv2')).toEqual({ b: '2' })
+
+    if (existsSync(configPath)) {
+      await unlink(configPath)
+    }
+    setConfigPath(null)
   })
 
   it('deletes file when last server removed', async () => {
-    await writeConfig('telegram', { botToken: 'tok' })
-    await deleteConfig('telegram')
+    const configPath = join(dirname(DEFAULT_CONFIG_PATH), 'empty-test.enc')
+    setConfigPath(configPath)
 
-    const { existsSync } = await import('node:fs')
-    expect(existsSync(join(tempDir, 'config.enc'))).toBe(false)
+    await writeConfig('srv', { a: '1' })
+    expect(existsSync(configPath)).toBe(true)
+
+    await deleteConfig('srv')
+    expect(existsSync(configPath)).toBe(false)
+
+    setConfigPath(null)
   })
 
   it('no-op for non-existent server', async () => {
-    await writeConfig('telegram', { botToken: 'tok' })
-    await deleteConfig('nonexistent')
-    expect(await readConfig('telegram')).toEqual({ botToken: 'tok' })
-  })
-})
+    const configPath = join(dirname(DEFAULT_CONFIG_PATH), 'noop-test.enc')
+    setConfigPath(configPath)
 
-describe('listConfigs', () => {
+    await writeConfig('srv', { a: '1' })
+    await deleteConfig('other')
+    expect(await readConfig('srv')).toEqual({ a: '1' })
+
+    if (existsSync(configPath)) {
+      await unlink(configPath)
+    }
+    setConfigPath(null)
+  })
+
   it('returns empty array when no config', async () => {
+    const configPath = join(dirname(DEFAULT_CONFIG_PATH), 'list-empty.enc')
+    setConfigPath(configPath)
     expect(await listConfigs()).toEqual([])
+    setConfigPath(null)
   })
 
   it('returns list of server names', async () => {
-    await writeConfig('telegram', { a: '1' })
-    await writeConfig('slack', { b: '2' })
-    await writeConfig('discord', { c: '3' })
+    const configPath = join(dirname(DEFAULT_CONFIG_PATH), 'list-test.enc')
+    setConfigPath(configPath)
 
-    const names = await listConfigs()
-    expect(names.sort()).toEqual(['discord', 'slack', 'telegram'])
+    await writeConfig('a', {})
+    await writeConfig('c', {})
+    await writeConfig('b', {})
+
+    const list = await listConfigs()
+    expect(list).toContain('a')
+    expect(list).toContain('b')
+    expect(list).toContain('c')
+    expect(list.length).toBe(3)
+
+    if (existsSync(configPath)) {
+      await unlink(configPath)
+    }
+    setConfigPath(null)
   })
 })
 
 describe('exportConfig + importConfig', () => {
   it('roundtrip with passphrase', async () => {
+    const configPath = join(dirname(DEFAULT_CONFIG_PATH), 'export-test.enc')
+    setConfigPath(configPath)
+
     await writeConfig('telegram', { botToken: 'abc' })
     await writeConfig('slack', { webhook: 'url' })
 
-    const exported = await exportConfig('my-secret-passphrase')
-    expect(exported).toBeInstanceOf(Buffer)
+    const exportData = await exportConfig('secret-passphrase')
+    expect(exportData).toBeInstanceOf(Buffer)
 
     // Clear local config
     await deleteConfig('telegram')
     await deleteConfig('slack')
     expect(await listConfigs()).toEqual([])
 
-    // Import back
-    await importConfig('my-secret-passphrase', exported)
+    // Import
+    await importConfig('secret-passphrase', exportData)
     expect(await readConfig('telegram')).toEqual({ botToken: 'abc' })
     expect(await readConfig('slack')).toEqual({ webhook: 'url' })
+
+    if (existsSync(configPath)) {
+      await unlink(configPath)
+    }
+    setConfigPath(null)
   })
 
   it('wrong passphrase fails to import', async () => {
-    await writeConfig('telegram', { botToken: 'abc' })
-    const exported = await exportConfig('correct-pass')
-
-    await expect(importConfig('wrong-pass', exported)).rejects.toThrow()
+    await writeConfig('t', { k: 'v' })
+    const data = await exportConfig('correct')
+    await expect(importConfig('wrong', data)).rejects.toThrow()
+    await deleteConfig('t')
   })
 
   it('import merges into existing config', async () => {
-    await writeConfig('local-server', { key: 'local-val' })
+    const configPath = join(dirname(DEFAULT_CONFIG_PATH), 'merge-test.enc')
+    setConfigPath(configPath)
 
-    // Create export data from a separate config
-    await writeConfig('remote-server', { key: 'remote-val' })
-    const exported = await exportConfig('pass')
+    await writeConfig('existing', { k: 'v1' })
+    const exportData = await exportConfig('pass')
 
-    // Remove remote, keep local
-    await deleteConfig('remote-server')
-    expect(await listConfigs()).toEqual(['local-server'])
+    await writeConfig('existing', { k: 'v2' })
+    await writeConfig('new', { k: 'v3' })
 
-    // Import should merge
-    await importConfig('pass', exported)
-    expect(await readConfig('local-server')).toEqual({ key: 'local-val' })
-    expect(await readConfig('remote-server')).toEqual({ key: 'remote-val' })
+    await importConfig('pass', exportData)
+
+    expect(await readConfig('existing')).toEqual({ k: 'v1' })
+    expect(await readConfig('new')).toEqual({ k: 'v3' })
+
+    if (existsSync(configPath)) {
+      await unlink(configPath)
+    }
+    setConfigPath(null)
+  })
+})
+
+describe('migration', () => {
+  it('automatically migrates legacy 100k iteration config to 600k', async () => {
+    const configPath = join(dirname(DEFAULT_CONFIG_PATH), 'migration-test.enc')
+    setConfigPath(configPath)
+
+    const legacyIterations = 100_000
+    const [machineId, username] = await Promise.all([getMachineId(), getUsername()])
+    const legacyKey = await deriveFileKey(machineId, username, legacyIterations)
+
+    const store = { version: 1, servers: { 'legacy-srv': { key: 'val' } } }
+    const encrypted = await encryptData(legacyKey, JSON.stringify(store))
+    await writeFile(configPath, encrypted)
+
+    // First load should work due to fallback, and it should trigger migration
+    const readStore = await readConfig('legacy-srv')
+    expect(readStore).toEqual({ key: 'val' })
+
+    // Verify file was re-encrypted with new iterations (should NOT be decryptable with legacy key)
+    const newData = await readFile(configPath)
+    await expect(decryptData(legacyKey, newData)).rejects.toThrow()
+
+    // Should be decryptable with new default iterations
+    const newKey = await deriveFileKey(machineId, username)
+    const decryptedJson = await decryptData(newKey, newData)
+    expect(JSON.parse(decryptedJson)).toEqual(store)
+
+    if (existsSync(configPath)) {
+      await unlink(configPath)
+    }
+    setConfigPath(null)
   })
 })

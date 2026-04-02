@@ -1,5 +1,7 @@
 """Tests for encrypted config file management."""
 
+import json
+
 import pytest
 from cryptography.exceptions import InvalidTag
 
@@ -12,6 +14,12 @@ from mcp_relay_core.storage.config_file import (
     set_config_path,
     write_config,
 )
+from mcp_relay_core.storage.encryption import (
+    decrypt_data,
+    derive_file_key,
+    encrypt_data,
+)
+from mcp_relay_core.storage.machine_id import get_machine_id, get_username
 
 
 @pytest.fixture(autouse=True)
@@ -130,3 +138,33 @@ class TestExportImportConfig:
         import_config("pass", exported)
         assert read_config("local-server") == {"key": "local-val"}
         assert read_config("remote-server") == {"key": "remote-val"}
+
+
+def test_automatically_migrates_legacy_100k_iteration_config_to_600k(tmp_path):
+    config_path = tmp_path / "migration-test.enc"
+    set_config_path(str(config_path))
+
+    legacy_iterations = 100_000
+    machine_id = get_machine_id()
+    username = get_username()
+    legacy_key = derive_file_key(machine_id, username, legacy_iterations)
+
+    store = {"version": 1, "servers": {"legacy-srv": {"key": "val"}}}
+    encrypted = encrypt_data(legacy_key, json.dumps(store))
+    config_path.write_bytes(encrypted)
+
+    # First load should work due to fallback, and it should trigger migration
+    read_store = read_config("legacy-srv")
+    assert read_store == {"key": "val"}
+
+    # Verify file was re-encrypted with new iterations (should NOT be decryptable with legacy key)
+    new_data = config_path.read_bytes()
+    with pytest.raises(InvalidTag):
+        decrypt_data(legacy_key, new_data)
+
+    # Should be decryptable with new default iterations
+    new_key = derive_file_key(machine_id, username)
+    decrypted_json = decrypt_data(new_key, new_data)
+    assert json.loads(decrypted_json) == store
+
+    set_config_path(None)

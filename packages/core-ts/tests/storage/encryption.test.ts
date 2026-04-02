@@ -80,3 +80,21 @@ describe('encrypt + decrypt roundtrip', () => {
     await expect(decryptData(key2, encrypted)).rejects.toThrow()
   })
 })
+
+describe('backward compatibility', () => {
+  it('can decrypt data encrypted with legacy iterations (100k)', async () => {
+    const legacyIterations = 100_000
+    const keyLegacy = await deriveFileKey('compat-machine', 'compat-user', legacyIterations)
+    const plaintext = 'legacy secret'
+    const encrypted = await encryptData(keyLegacy, plaintext)
+
+    // Decrypt with current default (should fail if we use default key)
+    const keyCurrent = await deriveFileKey('compat-machine', 'compat-user')
+    await expect(decryptData(keyCurrent, encrypted)).rejects.toThrow()
+
+    // Explicitly using legacy iterations works
+    const keyLegacyRetry = await deriveFileKey('compat-machine', 'compat-user', legacyIterations)
+    const decrypted = await decryptData(keyLegacyRetry, encrypted)
+    expect(decrypted).toBe(plaintext)
+  })
+})

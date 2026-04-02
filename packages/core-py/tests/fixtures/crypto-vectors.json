@@ -11,5 +11,11 @@
     "iv_hex": "000000000000000000000000",
     "ciphertext_hex": "05551b79cbc789816118be33e2efc3a3b02e31138ff2208047a8f84608b16efd48",
     "tag_hex": "77934b8180d5553644070a4e9031bde3"
+  },
+  "pbkdf2": {
+    "machine_id": "machine-123",
+    "username": "alice",
+    "iterations": 600000,
+    "derived_key_hex": "eaacdf382d5eba011a1d78c2c975fa698ed4f9d84f808e77065980aa75b6a6ae"
   }
 }

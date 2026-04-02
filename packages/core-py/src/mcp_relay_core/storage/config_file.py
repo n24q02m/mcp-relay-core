@@ -11,6 +11,8 @@ from typing import Any
 from platformdirs import user_config_dir
 
 from mcp_relay_core.storage.encryption import (
+    LEGACY_PBKDF2_ITERATIONS,
+    PBKDF2_ITERATIONS,
     decrypt_data,
     derive_file_key,
     derive_passphrase_key,
@@ -38,10 +40,10 @@ def _get_config_path() -> Path:
     return _DEFAULT_CONFIG_PATH
 
 
-def _get_key() -> bytes:
+def _get_key(iterations: int = PBKDF2_ITERATIONS) -> bytes:
     machine_id = get_machine_id()
     username = get_username()
-    return derive_file_key(machine_id, username)
+    return derive_file_key(machine_id, username, iterations)
 
 
 def _with_retry(fn: Any) -> Any:
@@ -62,16 +64,27 @@ def _load_store() -> dict[str, Any]:
     config_path = _get_config_path()
     if not config_path.exists():
         return {"version": 1, "servers": {}}
-    key = _get_key()
     data = config_path.read_bytes()
-    json_str = decrypt_data(key, data)
-    return json.loads(json_str)
+    try:
+        key = _get_key(PBKDF2_ITERATIONS)
+        json_str = decrypt_data(key, data)
+        return json.loads(json_str)
+    except Exception as err:
+        try:
+            legacy_key = _get_key(LEGACY_PBKDF2_ITERATIONS)
+            json_str = decrypt_data(legacy_key, data)
+            store = json.loads(json_str)
+            # Migration: Save with new iteration count
+            _save_store(store)
+            return store
+        except Exception:
+            raise err from None
 
 
 def _save_store(store: dict[str, Any]) -> None:
     config_path = _get_config_path()
     config_path.parent.mkdir(parents=True, exist_ok=True)
-    key = _get_key()
+    key = _get_key(PBKDF2_ITERATIONS)
     encrypted = encrypt_data(key, json.dumps(store))
 
     def _write() -> None:
@@ -144,7 +157,7 @@ def export_config(passphrase: str) -> bytes:
         Encrypted bytes.
     """
     store = _load_store()
-    key = derive_passphrase_key(passphrase)
+    key = derive_passphrase_key(passphrase, PBKDF2_ITERATIONS)
     return encrypt_data(key, json.dumps(store))
 
 
@@ -158,8 +171,16 @@ def import_config(passphrase: str, data: bytes) -> None:
     Raises:
         cryptography.exceptions.InvalidTag: If passphrase is wrong.
     """
-    key = derive_passphrase_key(passphrase)
-    json_str = decrypt_data(key, data)
+    try:
+        key = derive_passphrase_key(passphrase, PBKDF2_ITERATIONS)
+        json_str = decrypt_data(key, data)
+    except Exception as err:
+        try:
+            legacy_key = derive_passphrase_key(passphrase, LEGACY_PBKDF2_ITERATIONS)
+            json_str = decrypt_data(legacy_key, data)
+        except Exception:
+            raise err from None
+
     imported = json.loads(json_str)
 
     store = _load_store()
