@@ -1,4 +1,8 @@
-## 2024-05-18 - Missing Security Headers in Relay Server API
-**Vulnerability:** The Express API (`packages/relay-server`) lacked essential HTTP security headers like `Content-Security-Policy`, `X-Content-Type-Options`, `X-Frame-Options`, and `Strict-Transport-Security`.
-**Learning:** Despite the unique zero-knowledge architecture (where sensitive data is encrypted by the client and not readable by the server), defense in depth remains important. Even opaque APIs could be subject to MIME sniffing or clickjacking if served without appropriate headers.
-**Prevention:** Always use the `helmet` package to apply a baseline set of security headers on Express servers, even those not directly serving HTML pages.
+## 2025-05-14 - Unvalidated Input Size in Relay Server
+
+**Learning:** Lack of explicit size validation for complex input objects (like the `schema` in session creation) can lead to memory exhaustion even if global body limits are in place, if those limits are too permissive. Defaulting to a 1MB limit for an API that primarily handles small JSON objects is a risk.
+
+**Action:**
+1. Always set the most restrictive global JSON body limit possible (e.g., 100KB instead of 1MB).
+2. For specific fields that are stored in memory or databases, implement field-level size validation (e.g., `JSON.stringify(obj).length`).
+3. Ensure security tests include boundary checks for payload and field sizes.
