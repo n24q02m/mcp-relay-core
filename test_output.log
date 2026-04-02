@@ -1,0 +1,6 @@
+$ bun x playwright test --config e2e/playwright.config.ts "e2e/relay-flow.spec.ts" "--project=chromium" --headed "--timeout=60000"
+Error: Project(s) "chromium" not found. Available projects: ""
+    at filterProjects (/app/node_modules/playwright/lib/runner/projectUtils.js:80:11)
+    at runTests (/app/node_modules/playwright/lib/program.js:208:42)
+    at i.<anonymous> (/app/node_modules/playwright/lib/program.js:70:7)
+error: script "test:e2e" exited with code 1
