@@ -1,0 +1,24 @@
+127.0.0.1 - - [02/Apr/2026 09:36:39] "HEAD /wet/index.html HTTP/1.1" 200 -
+127.0.0.1 - - [02/Apr/2026 09:51:09] "GET /wet/index.html?s=dummy HTTP/1.1" 200 -
+127.0.0.1 - - [02/Apr/2026 09:51:09] "GET /shared/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [02/Apr/2026 09:51:09] "GET /wet/form.js HTTP/1.1" 200 -
+127.0.0.1 - - [02/Apr/2026 09:51:09] "GET /shared/relay-client.js HTTP/1.1" 200 -
+127.0.0.1 - - [02/Apr/2026 09:51:09] "GET /shared/form-handler.js HTTP/1.1" 200 -
+127.0.0.1 - - [02/Apr/2026 09:51:09] "GET /shared/ui.js HTTP/1.1" 200 -
+127.0.0.1 - - [02/Apr/2026 09:51:09] "GET /shared/crypto.js HTTP/1.1" 200 -
+127.0.0.1 - - [02/Apr/2026 09:51:09] code 404, message File not found
+127.0.0.1 - - [02/Apr/2026 09:51:09] "GET /api/sessions/dummy HTTP/1.1" 404 -
+127.0.0.1 - - [02/Apr/2026 09:51:11] "GET /email/index.html?s=dummy HTTP/1.1" 200 -
+127.0.0.1 - - [02/Apr/2026 09:51:11] "GET /shared/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [02/Apr/2026 09:51:11] "GET /email/form.js HTTP/1.1" 200 -
+127.0.0.1 - - [02/Apr/2026 09:51:11] "GET /shared/relay-client.js HTTP/1.1" 200 -
+127.0.0.1 - - [02/Apr/2026 09:51:11] "GET /shared/ui.js HTTP/1.1" 200 -
+127.0.0.1 - - [02/Apr/2026 09:51:11] "GET /shared/form-handler.js HTTP/1.1" 200 -
+127.0.0.1 - - [02/Apr/2026 09:51:11] "GET /shared/crypto.js HTTP/1.1" 200 -
+127.0.0.1 - - [02/Apr/2026 09:51:14] "GET /telegram/index.html?s=dummy HTTP/1.1" 200 -
+127.0.0.1 - - [02/Apr/2026 09:51:14] "GET /telegram/form.js HTTP/1.1" 200 -
+127.0.0.1 - - [02/Apr/2026 09:51:14] "GET /shared/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [02/Apr/2026 09:51:14] "GET /shared/relay-client.js HTTP/1.1" 200 -
+127.0.0.1 - - [02/Apr/2026 09:51:14] "GET /shared/ui.js HTTP/1.1" 200 -
+127.0.0.1 - - [02/Apr/2026 09:51:14] "GET /shared/form-handler.js HTTP/1.1" 200 -
+127.0.0.1 - - [02/Apr/2026 09:51:14] "GET /shared/crypto.js HTTP/1.1" 200 -

@@ -1,35 +1,8 @@
-import { parseFragment, getSessionId, submitResult } from '/shared/relay-client.js'
-import {
-  importPublicKey,
-  generateKeyPair,
-  deriveSharedSecret,
-  deriveAesKey,
-  encrypt,
-  exportPublicKey,
-} from '/shared/crypto.js'
-import { renderFields, showStatus, startMessagePolling } from '/shared/ui.js'
+import { setupForm, setupSkipButton } from '/shared/form-handler.js'
+import { getSessionId, parseFragment } from '/shared/relay-client.js'
+import { showStatus } from '/shared/ui.js'
 
-const OAUTH_DOMAINS = ['outlook.com', 'hotmail.com', 'live.com']
-const APP_PASSWORD_DOMAINS = {
-  'gmail.com': {
-    label: 'App Password',
-    helpUrl: 'https://myaccount.google.com/apppasswords',
-    helpText: 'Generate an App Password in your Google Account settings',
-  },
-  'googlemail.com': {
-    label: 'App Password',
-    helpUrl: 'https://myaccount.google.com/apppasswords',
-    helpText: 'Generate an App Password in your Google Account settings',
-  },
-  'yahoo.com': {
-    label: 'App Password',
-    helpText: 'Generate an App Password in Yahoo Account Security settings',
-  },
-  'icloud.com': {
-    label: 'App Password',
-    helpText: 'Generate an App Password at appleid.apple.com',
-  },
-}
+const OAUTH_DOMAINS = ['gmail.com', 'outlook.com', 'hotmail.com']
 
 const { publicKey: cliPubKeyB64, passphrase } = parseFragment()
 const sessionId = getSessionId()
@@ -42,104 +15,87 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
   )
 } else {
   const fieldsContainer = document.getElementById('fields')
-  const submitBtn = document.getElementById('submit-btn')
+  const _submitBtn = document.getElementById('submit-btn')
   let accountIndex = 0
 
   function createAccountCard(idx) {
-    const card = document.createElement('div')
-    card.className = 'account-card'
-    card.dataset.idx = idx
-    card.style.cssText =
-      'border: 1px solid #333; border-radius: 8px; padding: 16px; margin-bottom: 12px; position: relative;'
+    const div = document.createElement('div')
+    div.className = 'account-card'
+    div.dataset.idx = idx
+    div.style.cssText =
+      'border: 1px solid #333; padding: 16px; margin-bottom: 16px; border-radius: 8px; background: #16213e;'
 
-    const header = document.createElement('div')
-    header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;'
-    const title = document.createElement('strong')
-    title.textContent = `Account ${idx + 1}`
-    header.appendChild(title)
+    const title = document.createElement('h3')
+    title.textContent = `Account #${idx + 1}`
+    title.style.margin = '0 0 12px 0'
+    div.appendChild(title)
+
+    const emailLabel = document.createElement('label')
+    emailLabel.textContent = 'Email Address'
+    emailLabel.htmlFor = `email_${idx}`
+    div.appendChild(emailLabel)
+
+    const emailInput = document.createElement('input')
+    emailInput.id = `email_${idx}`
+    emailInput.type = 'email'
+    emailInput.placeholder = 'you@example.com'
+    emailInput.required = true
+    div.appendChild(emailInput)
+
+    const authContainer = document.createElement('div')
+    authContainer.style.marginTop = '12px'
+    div.appendChild(authContainer)
+
+    emailInput.addEventListener('input', () => {
+      const email = emailInput.value.trim()
+      const domain = email.split('@')[1]?.toLowerCase()
+      authContainer.innerHTML = ''
+
+      if (OAUTH_DOMAINS.includes(domain)) {
+        const p = document.createElement('p')
+        p.textContent = 'OAuth2 will be used for this domain. No password required here.'
+        p.style.color = '#27ae60'
+        authContainer.appendChild(p)
+      } else if (domain) {
+        const passLabel = document.createElement('label')
+        passLabel.textContent = 'App Password'
+        passLabel.htmlFor = `password_${idx}`
+        authContainer.appendChild(passLabel)
+
+        const passInput = document.createElement('input')
+        passInput.id = `password_${idx}`
+        passInput.type = 'password'
+        passInput.required = true
+        authContainer.appendChild(passInput)
+
+        const imapLabel = document.createElement('label')
+        imapLabel.textContent = 'IMAP Host (optional)'
+        imapLabel.htmlFor = `imap_${idx}`
+        imapLabel.style.marginTop = '8px'
+        authContainer.appendChild(imapLabel)
+
+        const imapInput = document.createElement('input')
+        imapInput.id = `imap_${idx}`
+        imapInput.placeholder = 'imap.example.com'
+        authContainer.appendChild(imapInput)
+      }
+    })
 
     if (idx > 0) {
       const removeBtn = document.createElement('button')
       removeBtn.type = 'button'
       removeBtn.textContent = 'Remove'
       removeBtn.style.cssText =
-        'background: #c0392b; color: white; border: none; border-radius: 4px; padding: 4px 12px; cursor: pointer; font-size: 13px;'
-      removeBtn.addEventListener('click', () => {
-        card.remove()
-        updateAccountNumbers()
-      })
-      header.appendChild(removeBtn)
+        'background: #c0392b; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; margin-top: 12px;'
+      removeBtn.addEventListener('click', () => div.remove())
+      div.appendChild(removeBtn)
     }
-    card.appendChild(header)
 
-    const emailContainer = document.createElement('div')
-    renderFields(emailContainer, [
-      {
-        key: `email_${idx}`,
-        label: 'Email Address',
-        type: 'email',
-        placeholder: 'you@example.com',
-      },
-    ])
-    card.appendChild(emailContainer)
-
-    const extraContainer = document.createElement('div')
-    extraContainer.id = `extra_${idx}`
-    card.appendChild(extraContainer)
-
-    const emailInput = emailContainer.querySelector('input[type="email"]')
-    emailInput.addEventListener('input', () => {
-      const domain = emailInput.value.split('@')[1]?.toLowerCase()
-      extraContainer.innerHTML = ''
-
-      if (!domain) return
-
-      if (OAUTH_DOMAINS.includes(domain)) {
-        const notice = document.createElement('div')
-        notice.className = 'field'
-        const msg = document.createElement('p')
-        msg.textContent = 'Outlook requires OAuth2. This will be handled automatically by the server.'
-        notice.appendChild(msg)
-        extraContainer.appendChild(notice)
-      } else if (APP_PASSWORD_DOMAINS[domain]) {
-        const info = APP_PASSWORD_DOMAINS[domain]
-        renderFields(extraContainer, [
-          {
-            key: `password_${idx}`,
-            label: info.label,
-            type: 'password',
-            helpUrl: info.helpUrl,
-            helpText: info.helpText,
-          },
-        ])
-      } else {
-        renderFields(extraContainer, [
-          { key: `password_${idx}`, label: 'Password', type: 'password' },
-          {
-            key: `imap_${idx}`,
-            label: 'IMAP Host',
-            type: 'text',
-            placeholder: 'imap.example.com',
-            required: false,
-            helpText: 'Optional. Leave empty for auto-detection.',
-          },
-        ])
-      }
-      submitBtn.disabled = false
-    })
-
-    return card
-  }
-
-  function updateAccountNumbers() {
-    const cards = fieldsContainer.querySelectorAll('.account-card')
-    cards.forEach((card, i) => {
-      card.querySelector('strong').textContent = `Account ${i + 1}`
-    })
+    return div
   }
 
   function collectAccounts() {
-    const cards = fieldsContainer.querySelectorAll('.account-card')
+    const cards = document.querySelectorAll('.account-card')
     const accounts = []
     for (const card of cards) {
       const idx = card.dataset.idx
@@ -176,83 +132,24 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
   })
   fieldsContainer.appendChild(addBtn)
 
-  document.getElementById('setup-form').addEventListener('submit', async (e) => {
-    e.preventDefault()
-    submitBtn.disabled = true
-    submitBtn.textContent = 'Encrypting...'
-
-    try {
+  setupForm({
+    sessionId,
+    cliPubKeyB64,
+    passphrase,
+    onCollect: async () => {
       const accounts = collectAccounts()
       if (accounts.length === 0) {
-        throw new Error('Please add at least one email account')
+        alert('Please add at least one email account')
+        return null
       }
-
-      // Format as EMAIL_CREDENTIALS: email1:pass1,email2:pass2:imap_host
       const parts = accounts.map((a) => {
         if (a.auth === 'oauth2') return a.email
         if (a.imapHost) return `${a.email}:${a.password}:${a.imapHost}`
         return `${a.email}:${a.password}`
       })
-
-      const config = { EMAIL_CREDENTIALS: parts.join(',') }
-
-      // Step-by-step crypto with diagnostics
-      console.log('Key length (base64url):', cliPubKeyB64?.length, 'Passphrase:', passphrase ? 'SET' : 'EMPTY')
-      let cliPubKey, browserKeyPair, sharedSecret, aesKey
-      try { cliPubKey = await importPublicKey(cliPubKeyB64) } catch (e) {
-        throw new Error(`Key import failed (len=${cliPubKeyB64?.length}): ${e.name || e.message}`)
-      }
-      try { browserKeyPair = await generateKeyPair() } catch (e) {
-        throw new Error(`Key generation failed: ${e.name || e.message}`)
-      }
-      try { sharedSecret = await deriveSharedSecret(browserKeyPair.privateKey, cliPubKey) } catch (e) {
-        throw new Error(`Key exchange failed: ${e.name || e.message}`)
-      }
-      try { aesKey = await deriveAesKey(sharedSecret, passphrase) } catch (e) {
-        throw new Error(`Key derivation failed: ${e.name || e.message}`)
-      }
-
-      const { ciphertext, iv, tag } = await encrypt(aesKey, JSON.stringify(config))
-      const browserPub = await exportPublicKey(browserKeyPair.publicKey)
-
-      const result = await submitResult(sessionId, browserPub, ciphertext, iv, tag)
-      if (result.ok) {
-        document.getElementById('setup-form').style.display = 'none'
-        showStatus(
-          document.getElementById('status-container'),
-          'Credentials sent. Waiting for server...',
-          'info'
-        )
-        startMessagePolling(sessionId, document.getElementById('status-container'))
-      } else {
-        throw new Error(`Submit failed (${result.status}): ${result.error || 'unknown error'}`)
-      }
-    } catch (err) {
-      const msg = err?.message || err?.name || String(err) || 'Unknown encryption error'
-      console.error('Relay submit error:', err)
-      showStatus(document.getElementById('status-container'), `Error: ${msg}`, 'error')
-      submitBtn.disabled = false
-      submitBtn.textContent = 'Encrypt & Send'
+      return { EMAIL_CREDENTIALS: parts.join(',') }
     }
   })
 
-  const skipBtn = document.createElement('button')
-  skipBtn.type = 'button'
-  skipBtn.textContent = 'Skip Setup (use defaults)'
-  skipBtn.style.cssText = 'background: transparent; color: #888; border: 1px solid #555; border-radius: 4px; padding: 8px 16px; cursor: pointer; width: 100%; margin-top: 8px;'
-  skipBtn.addEventListener('click', async () => {
-    skipBtn.disabled = true
-    skipBtn.textContent = 'Skipping...'
-    try {
-      const response = await fetch(`/api/sessions/${sessionId}/skip`, { method: 'POST' })
-      if (response.ok) {
-        showStatus(document.getElementById('status-container'), 'Setup skipped. Server will use default settings.', 'info')
-        document.getElementById('setup-form').style.display = 'none'
-      }
-    } catch (err) {
-      skipBtn.disabled = false
-      skipBtn.textContent = 'Skip Setup (use defaults)'
-    }
-  })
-  document.getElementById('setup-form').appendChild(skipBtn)
+  setupSkipButton({ sessionId })
 }
