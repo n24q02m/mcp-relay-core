@@ -73,7 +73,7 @@ describe('createSession', () => {
   })
 
   it('should call POST /api/sessions', async () => {
-    const session = await createSession('https://relay.example.com', 'test-server', mockSchema)
+    const _session = await createSession('https://relay.example.com', 'test-server', mockSchema)
 
     expect(fetch).toHaveBeenCalledOnce()
     const call = vi.mocked(fetch).mock.calls[0]
@@ -127,7 +127,7 @@ describe('pollForResult', () => {
     const browserPub = await exportPublicKey(browserKeyPair.publicKey)
 
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, opts) => {
-      const urlStr = typeof url === 'string' ? url : url.toString()
+      const _urlStr = typeof url === 'string' ? url : url.toString()
       if (opts?.method === 'DELETE') {
         return new Response('', { status: 204 })
       }
