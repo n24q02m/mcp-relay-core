@@ -1,12 +1,5 @@
-import { parseFragment, getSessionId, submitResult } from '/shared/relay-client.js'
-import {
-  importPublicKey,
-  generateKeyPair,
-  deriveSharedSecret,
-  deriveAesKey,
-  encrypt,
-  exportPublicKey,
-} from '/shared/crypto.js'
+import { addSkipButton, encryptAndSubmit } from '/shared/form-handler.js'
+import { getSessionId, parseFragment } from '/shared/relay-client.js'
 import { renderFields, showStatus, startMessagePolling } from '/shared/ui.js'
 
 const OAUTH_DOMAINS = ['outlook.com', 'hotmail.com', 'live.com']
@@ -14,21 +7,21 @@ const APP_PASSWORD_DOMAINS = {
   'gmail.com': {
     label: 'App Password',
     helpUrl: 'https://myaccount.google.com/apppasswords',
-    helpText: 'Generate an App Password in your Google Account settings',
+    helpText: 'Generate an App Password in your Google Account settings'
   },
   'googlemail.com': {
     label: 'App Password',
     helpUrl: 'https://myaccount.google.com/apppasswords',
-    helpText: 'Generate an App Password in your Google Account settings',
+    helpText: 'Generate an App Password in your Google Account settings'
   },
   'yahoo.com': {
     label: 'App Password',
-    helpText: 'Generate an App Password in Yahoo Account Security settings',
+    helpText: 'Generate an App Password in Yahoo Account Security settings'
   },
   'icloud.com': {
     label: 'App Password',
-    helpText: 'Generate an App Password at appleid.apple.com',
-  },
+    helpText: 'Generate an App Password at appleid.apple.com'
+  }
 }
 
 const { publicKey: cliPubKeyB64, passphrase } = parseFragment()
@@ -78,8 +71,8 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
         key: `email_${idx}`,
         label: 'Email Address',
         type: 'email',
-        placeholder: 'you@example.com',
-      },
+        placeholder: 'you@example.com'
+      }
     ])
     card.appendChild(emailContainer)
 
@@ -109,8 +102,8 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
             label: info.label,
             type: 'password',
             helpUrl: info.helpUrl,
-            helpText: info.helpText,
-          },
+            helpText: info.helpText
+          }
         ])
       } else {
         renderFields(extraContainer, [
@@ -121,8 +114,8 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
             type: 'text',
             placeholder: 'imap.example.com',
             required: false,
-            helpText: 'Optional. Leave empty for auto-detection.',
-          },
+            helpText: 'Optional. Leave empty for auto-detection.'
+          }
         ])
       }
       submitBtn.disabled = false
@@ -196,63 +189,20 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
 
       const config = { EMAIL_CREDENTIALS: parts.join(',') }
 
-      // Step-by-step crypto with diagnostics
-      console.log('Key length (base64url):', cliPubKeyB64?.length, 'Passphrase:', passphrase ? 'SET' : 'EMPTY')
-      let cliPubKey, browserKeyPair, sharedSecret, aesKey
-      try { cliPubKey = await importPublicKey(cliPubKeyB64) } catch (e) {
-        throw new Error(`Key import failed (len=${cliPubKeyB64?.length}): ${e.name || e.message}`)
-      }
-      try { browserKeyPair = await generateKeyPair() } catch (e) {
-        throw new Error(`Key generation failed: ${e.name || e.message}`)
-      }
-      try { sharedSecret = await deriveSharedSecret(browserKeyPair.privateKey, cliPubKey) } catch (e) {
-        throw new Error(`Key exchange failed: ${e.name || e.message}`)
-      }
-      try { aesKey = await deriveAesKey(sharedSecret, passphrase) } catch (e) {
-        throw new Error(`Key derivation failed: ${e.name || e.message}`)
-      }
-
-      const { ciphertext, iv, tag } = await encrypt(aesKey, JSON.stringify(config))
-      const browserPub = await exportPublicKey(browserKeyPair.publicKey)
-
-      const result = await submitResult(sessionId, browserPub, ciphertext, iv, tag)
+      const result = await encryptAndSubmit(config, { sessionId, cliPubKeyB64, passphrase })
       if (result.ok) {
         document.getElementById('setup-form').style.display = 'none'
-        showStatus(
-          document.getElementById('status-container'),
-          'Credentials sent. Waiting for server...',
-          'info'
-        )
+        showStatus(document.getElementById('status-container'), 'Credentials sent. Waiting for server...', 'success')
         startMessagePolling(sessionId, document.getElementById('status-container'))
       } else {
         throw new Error(`Submit failed (${result.status}): ${result.error || 'unknown error'}`)
       }
     } catch (err) {
-      const msg = err?.message || err?.name || String(err) || 'Unknown encryption error'
-      console.error('Relay submit error:', err)
-      showStatus(document.getElementById('status-container'), `Error: ${msg}`, 'error')
+      showStatus(document.getElementById('status-container'), err.message || String(err), 'error')
       submitBtn.disabled = false
       submitBtn.textContent = 'Encrypt & Send'
     }
   })
 
-  const skipBtn = document.createElement('button')
-  skipBtn.type = 'button'
-  skipBtn.textContent = 'Skip Setup (use defaults)'
-  skipBtn.style.cssText = 'background: transparent; color: #888; border: 1px solid #555; border-radius: 4px; padding: 8px 16px; cursor: pointer; width: 100%; margin-top: 8px;'
-  skipBtn.addEventListener('click', async () => {
-    skipBtn.disabled = true
-    skipBtn.textContent = 'Skipping...'
-    try {
-      const response = await fetch(`/api/sessions/${sessionId}/skip`, { method: 'POST' })
-      if (response.ok) {
-        showStatus(document.getElementById('status-container'), 'Setup skipped. Server will use default settings.', 'info')
-        document.getElementById('setup-form').style.display = 'none'
-      }
-    } catch (err) {
-      skipBtn.disabled = false
-      skipBtn.textContent = 'Skip Setup (use defaults)'
-    }
-  })
-  document.getElementById('setup-form').appendChild(skipBtn)
+  addSkipButton(sessionId)
 }
