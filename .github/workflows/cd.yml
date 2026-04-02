@@ -110,6 +110,8 @@ jobs:
           done
 
       - name: Build and publish core-ts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd packages/core-ts && bun run build
           VERSION=$(node -p "require('./package.json').version")
@@ -121,6 +123,8 @@ jobs:
           fi
 
       - name: Build and publish relay-server
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd packages/relay-server && bun run build
           VERSION=$(node -p "require('./package.json').version")
@@ -152,6 +156,8 @@ jobs:
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
 
       - name: Build and publish
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
         run: |
           cd packages/core-py
           uv build
