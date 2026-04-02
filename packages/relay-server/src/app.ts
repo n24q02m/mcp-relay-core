@@ -10,7 +10,7 @@ export function createApp(): express.Express {
   // Trust proxy headers from Caddy/CF Tunnel for correct client IP in rate limiting
   app.set('trust proxy', 1)
 
-  const corsOrigin = process.env.CORS_ORIGIN ?? '*'
+  const corsOrigin = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : '*'
   app.use(
     helmet({
       contentSecurityPolicy: false
@@ -30,9 +30,14 @@ export function createApp(): express.Express {
   const pagesDir = process.env.PAGES_DIR
   if (pagesDir) {
     // Short cache for JS/CSS (pages update with releases), no-cache for HTML
-    app.use(express.static(pagesDir, { maxAge: '1h', setHeaders: (res, path) => {
-      if (path.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache')
-    }}))
+    app.use(
+      express.static(pagesDir, {
+        maxAge: '1h',
+        setHeaders: (res, path) => {
+          if (path.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache')
+        }
+      })
+    )
   }
 
   return app
