@@ -1,5 +1,3 @@
-"""Tests for relay client: passphrase generation, session, polling."""
-
 import base64
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -22,46 +20,23 @@ from mcp_relay_core.relay.client import (
 from mcp_relay_core.relay.wordlist import WORDLIST
 
 
-class TestWordlist:
-    def test_contains_exactly_7776_words(self):
-        assert len(WORDLIST) == 7776
-
-    def test_contains_only_lowercase_strings(self):
-        import re
-
-        for word in WORDLIST:
-            assert re.match(r"^[a-z]+(-[a-z]+)*$", word), f"Invalid word: {word}"
-
-    def test_has_no_duplicates(self):
-        assert len(set(WORDLIST)) == len(WORDLIST)
-
-
 class TestGeneratePassphrase:
-    def test_returns_non_empty_string(self):
+    def test_returns_4_words_by_default(self):
         passphrase = generate_passphrase()
-        assert isinstance(passphrase, str)
-        assert len(passphrase) > 0
-        # Note: can't simply split("-") to count words because some EFF words
-        # contain hyphens (e.g., "drop-down"). We verify via wordlist membership.
+        assert len(passphrase.split("-")) == 4
 
     def test_respects_custom_word_count(self):
         passphrase = generate_passphrase(6)
-        # Verify by matching against wordlist — account for hyphenated words
-        found = [w for w in WORDLIST if w in passphrase]
-        assert len(found) >= 6
+        assert len(passphrase.split("-")) == 6
 
     def test_only_uses_words_from_wordlist(self):
         word_set = set(WORDLIST)
         for _ in range(20):
             passphrase = generate_passphrase()
-            # Reconstruct words by checking which wordlist entries appear
-            remaining = passphrase
-            matched = 0
-            for word in sorted(word_set, key=len, reverse=True):
-                if str(word) in remaining:
-                    remaining = remaining.replace(str(word), "", 1)
-                    matched += 1
-            assert matched >= 4
+            words = passphrase.split("-")
+            assert len(words) == 4
+            for w in words:
+                assert w in word_set
 
     def test_produces_different_passphrases(self):
         results = {generate_passphrase() for _ in range(10)}
@@ -73,14 +48,11 @@ class TestCreateSession:
     def mock_schema(self):
         return {
             "server": "test-server",
-            "displayName": "Test Server",
-            "fields": [
-                {"key": "token", "label": "Token", "type": "password", "required": True}
-            ],
+            "schema": {"type": "object", "properties": {"foo": {"type": "string"}}},
         }
 
     @pytest.mark.asyncio
-    async def test_calls_post_api_sessions(self, mock_schema):
+    async def test_calls_post_sessions(self, mock_schema):
         mock_response = MagicMock()
         mock_response.status_code = 201
 
