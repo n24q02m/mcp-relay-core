@@ -36,11 +36,26 @@ const MAX_MESSAGES_PER_SESSION = 50
 const MAX_RESPONSES_PER_SESSION = 50
 
 const sessions = new Map<string, Session>()
+const ipCounts = new Map<string, number>()
 let cleanupTimer: ReturnType<typeof setInterval> | null = null
+
+function decrementIpCount(ip: string): void {
+  const count = ipCounts.get(ip) || 0
+  if (count <= 1) {
+    ipCounts.delete(ip)
+  } else {
+    ipCounts.set(ip, count - 1)
+  }
+}
+
+function incrementIpCount(ip: string): void {
+  ipCounts.set(ip, (ipCounts.get(ip) || 0) + 1)
+}
 
 export function getSession(id: string): Session | undefined {
   const session = sessions.get(id)
   if (session && Date.now() - session.createdAt > SESSION_TTL_MS) {
+    decrementIpCount(session.sourceIp)
     sessions.delete(id)
     return undefined
   }
@@ -65,6 +80,7 @@ export function createSession(id: string, serverName: string, schema: unknown, s
     responses: []
   }
   sessions.set(id, session)
+  incrementIpCount(sourceIp)
   return session
 }
 
@@ -87,7 +103,12 @@ export function skipSession(id: string): boolean {
 }
 
 export function deleteSession(id: string): boolean {
-  return sessions.delete(id)
+  const session = sessions.get(id)
+  if (session) {
+    decrementIpCount(session.sourceIp)
+    return sessions.delete(id)
+  }
+  return false
 }
 
 export function addMessage(id: string, message: RelayMessage): boolean {
@@ -120,20 +141,14 @@ export function getResponses(id: string): RelayResponse[] {
 }
 
 function countSessionsByIp(ip: string): number {
-  const now = Date.now()
-  let count = 0
-  for (const session of sessions.values()) {
-    if (session.sourceIp === ip && now - session.createdAt <= SESSION_TTL_MS) {
-      count++
-    }
-  }
-  return count
+  return ipCounts.get(ip) || 0
 }
 
 function cleanup(): void {
   const now = Date.now()
   for (const [id, session] of sessions) {
     if (now - session.createdAt > SESSION_TTL_MS) {
+      decrementIpCount(session.sourceIp)
       sessions.delete(id)
     }
   }
@@ -155,4 +170,5 @@ export function stopCleanup(): void {
 
 export function clearAllSessions(): void {
   sessions.clear()
+  ipCounts.clear()
 }

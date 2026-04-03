@@ -10,14 +10,23 @@ export function createApp(): express.Express {
   // Trust proxy headers from Caddy/CF Tunnel for correct client IP in rate limiting
   app.set('trust proxy', 1)
 
-  const corsOrigin = process.env.CORS_ORIGIN ?? '*'
+  const rawOrigin = process.env.CORS_ORIGIN
+  let corsOrigin: boolean | string | string[] = false // Restrictive default: block cross-origin
+  if (rawOrigin) {
+    if (rawOrigin === '*') {
+      corsOrigin = '*'
+    } else {
+      corsOrigin = rawOrigin.split(',').map((o) => o.trim())
+    }
+  }
+
   app.use(
     helmet({
       contentSecurityPolicy: false
     })
   )
   app.use(cors({ origin: corsOrigin }))
-  app.use(express.json({ limit: '1mb' }))
+  app.use(express.json({ limit: '100kb' }))
 
   // Split rate limits: stricter for mutations, relaxed for polling
   app.use('/api', pollingLimiter) // GET requests (polling) — 120/min
@@ -30,9 +39,14 @@ export function createApp(): express.Express {
   const pagesDir = process.env.PAGES_DIR
   if (pagesDir) {
     // Short cache for JS/CSS (pages update with releases), no-cache for HTML
-    app.use(express.static(pagesDir, { maxAge: '1h', setHeaders: (res, path) => {
-      if (path.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache')
-    }}))
+    app.use(
+      express.static(pagesDir, {
+        maxAge: '1h',
+        setHeaders: (res, path) => {
+          if (path.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache')
+        }
+      })
+    )
   }
 
   return app
