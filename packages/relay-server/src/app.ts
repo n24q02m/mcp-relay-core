@@ -12,12 +12,8 @@ export function createApp(): express.Express {
 
   const rawOrigin = process.env.CORS_ORIGIN
   let corsOrigin: boolean | string | string[] = false // Restrictive default: block cross-origin
-  if (rawOrigin) {
-    if (rawOrigin === '*') {
-      corsOrigin = '*'
-    } else {
-      corsOrigin = rawOrigin.split(',').map((o) => o.trim())
-    }
+  if (rawOrigin && rawOrigin !== '*') {
+    corsOrigin = rawOrigin.split(',').map((o) => o.trim())
   }
 
   app.use(
