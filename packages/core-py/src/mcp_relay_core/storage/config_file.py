@@ -46,6 +46,7 @@ def _get_key() -> bytes:
 
 def _with_retry(fn: Any) -> Any:
     """Retry function on file busy errors."""
+    # The loop will either return a value or raise the last error if retries are exhausted.
     for attempt in range(_MAX_RETRIES):
         try:
             return fn()
@@ -54,8 +55,6 @@ def _with_retry(fn: Any) -> Any:
             if not is_busy or attempt == _MAX_RETRIES - 1:
                 raise
             time.sleep(_BASE_DELAY_S * (2**attempt))
-    msg = "Unreachable"
-    raise RuntimeError(msg)
 
 
 def _load_store() -> dict[str, Any]:

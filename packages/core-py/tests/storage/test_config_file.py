@@ -6,6 +6,7 @@ import pytest
 from cryptography.exceptions import InvalidTag
 
 from mcp_relay_core.storage.config_file import (
+    _get_config_path,
     _with_retry,
     delete_config,
     export_config,
@@ -22,7 +23,12 @@ def _temp_config(tmp_path):
     config_path = str(tmp_path / "config.enc")
     set_config_path(config_path)
     yield tmp_path
+
+
+def test_get_config_path_default():
     set_config_path(None)
+    path = _get_config_path()
+    assert str(path).endswith("config.enc")
 
 
 class TestWithRetry:
