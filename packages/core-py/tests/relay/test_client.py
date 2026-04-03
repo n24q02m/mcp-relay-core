@@ -389,6 +389,7 @@ class TestPollForResult:
             mock_client_cls.return_value = mock_client
 
             from mcp_relay_core.relay.client import _cleanup_session
+
             # Should not raise exception
             await _cleanup_session(mock_client, "some-url")
             mock_client.delete.assert_called_once()
