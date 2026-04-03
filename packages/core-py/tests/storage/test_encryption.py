@@ -62,6 +62,12 @@ class TestDerivePassphraseKey:
         with pytest.raises(InvalidTag):
             decrypt_data(key2, encrypted)
 
+    def test_known_value(self):
+        # Result of: hashlib.pbkdf2_hmac("sha256", b"correct-horse-battery-staple", b"mcp-relay-export", 100000, 32)
+        expected = "2949ffe06e806958227246408857c3280ef7f73db34603184267bdb7a38ebe9e"
+        key = derive_passphrase_key("correct-horse-battery-staple")
+        assert key.hex() == expected
+
 
 class TestEncryptDecryptRoundtrip:
     def test_encrypts_and_decrypts_plain_text(self):

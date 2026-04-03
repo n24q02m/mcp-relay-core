@@ -11,5 +11,11 @@
     "iv_hex": "000000000000000000000000",
     "ciphertext_hex": "05551b79cbc789816118be33e2efc3a3b02e31138ff2208047a8f84608b16efd48",
     "tag_hex": "77934b8180d5553644070a4e9031bde3"
+  },
+  "pbkdf2_passphrase": {
+    "passphrase": "correct-horse-battery-staple",
+    "salt": "mcp-relay-export",
+    "iterations": 100000,
+    "derived_key_hex": "2949ffe06e806958227246408857c3280ef7f73db34603184267bdb7a38ebe9e"
   }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { decryptData, deriveFileKey, encryptData } from '../../src/storage/encryption.js'
+import { decryptData, deriveFileKey, derivePassphraseKey, encryptData } from '../../src/storage/encryption.js'
 
 describe('deriveFileKey', () => {
   it('returns an AES-GCM CryptoKey', async () => {
@@ -33,6 +33,34 @@ describe('deriveFileKey', () => {
     const key2 = await deriveFileKey('machine-1', 'bob')
 
     const encrypted = await encryptData(key1, 'secret')
+    await expect(decryptData(key2, encrypted)).rejects.toThrow()
+  })
+})
+
+describe('derivePassphraseKey', () => {
+  it('returns an AES-GCM CryptoKey', async () => {
+    const key = await derivePassphraseKey('my secret passphrase')
+    expect(key).toBeDefined()
+    expect(key.algorithm).toMatchObject({ name: 'AES-GCM', length: 256 })
+    expect(key.usages).toContain('encrypt')
+    expect(key.usages).toContain('decrypt')
+  })
+
+  it('same passphrase produces same key', async () => {
+    const passphrase = 'password123'
+    const key1 = await derivePassphraseKey(passphrase)
+    const key2 = await derivePassphraseKey(passphrase)
+
+    const encrypted = await encryptData(key1, 'top secret')
+    const decrypted = await decryptData(key2, encrypted)
+    expect(decrypted).toBe('top secret')
+  })
+
+  it('different passphrase produces different key', async () => {
+    const key1 = await derivePassphraseKey('passphrase-A')
+    const key2 = await derivePassphraseKey('passphrase-B')
+
+    const encrypted = await encryptData(key1, 'top secret')
     await expect(decryptData(key2, encrypted)).rejects.toThrow()
   })
 })
