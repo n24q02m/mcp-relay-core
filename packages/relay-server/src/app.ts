@@ -11,13 +11,9 @@ export function createApp(): express.Express {
   app.set('trust proxy', 1)
 
   const rawOrigin = process.env.CORS_ORIGIN
-  let corsOrigin: boolean | string | string[] = false // Restrictive default: block cross-origin
-  if (rawOrigin) {
-    if (rawOrigin === '*') {
-      corsOrigin = '*'
-    } else {
-      corsOrigin = rawOrigin.split(',').map((o) => o.trim())
-    }
+  let corsOrigin: boolean | string[] = false // Restrictive default: block cross-origin
+  if (rawOrigin && rawOrigin !== '*') {
+    corsOrigin = rawOrigin.split(',').map((o) => o.trim())
   }
 
   app.use(
