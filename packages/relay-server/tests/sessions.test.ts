@@ -2,7 +2,7 @@ import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { createApp } from '../src/app.js'
-import { clearAllSessions } from '../src/store.js'
+import { clearAllSessions, getSession } from '../src/store.js'
 
 let server: Server
 let baseUrl: string
@@ -66,6 +66,21 @@ describe('POST /api/sessions', () => {
       body: JSON.stringify({ sessionId: 'test-bad' })
     })
     expect(res.status).toBe(400)
+  })
+
+  it('respects X-Forwarded-For when trust proxy is enabled', async () => {
+    const res = await fetch(`${baseUrl}/api/sessions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Forwarded-For': '192.168.1.100'
+      },
+      body: JSON.stringify({ sessionId: 'proxy-1', serverName: 'telegram', schema: {} })
+    })
+    expect(res.status).toBe(201)
+
+    const session = getSession('proxy-1')
+    expect(session?.sourceIp).toBe('192.168.1.100')
   })
 })
 
