@@ -2,6 +2,24 @@
 
 <!-- version list -->
 
+## v1.3.0 (2026-04-03)
+
+### Bug Fixes
+
+- Resolve Jules PR findings — security hardening, O(1) IP counting, tests
+  ([#85](https://github.com/n24q02m/mcp-relay-core/pull/85),
+  [`62d158e`](https://github.com/n24q02m/mcp-relay-core/commit/62d158ee706398a66620925158177a3b530df2c8))
+
+### Features
+
+- Notify downstream repos on stable release
+  ([#84](https://github.com/n24q02m/mcp-relay-core/pull/84),
+  [`51d4f79`](https://github.com/n24q02m/mcp-relay-core/commit/51d4f79574dbd049f16a0116fc33232fe8c4cc09))
+
+- Notify downstream repos on stable release
+  ([`3b866d7`](https://github.com/n24q02m/mcp-relay-core/commit/3b866d7053e546c9b4d095ad6cde32f8701258e2))
+
+
 ## v1.2.0 (2026-03-31)
 
 ### Bug Fixes
