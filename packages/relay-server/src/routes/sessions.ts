@@ -194,7 +194,7 @@ sessionsRouter.get('/:id/responses', (req: Request, res: Response) => {
     return
   }
 
-  const responses = getResponses(paramId(req))
+  const responses = getResponses(paramId(req), req.query.messageId as string)
   res.status(200).json({ responses })
 })
 

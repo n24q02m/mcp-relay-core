@@ -134,9 +134,12 @@ export function addResponse(id: string, response: RelayResponse): boolean {
   return true
 }
 
-export function getResponses(id: string): RelayResponse[] {
+export function getResponses(id: string, messageId?: string): RelayResponse[] {
   const session = getSession(id)
   if (!session) return []
+  if (messageId) {
+    return session.responses.filter((r) => r.messageId === messageId)
+  }
   return session.responses
 }
 

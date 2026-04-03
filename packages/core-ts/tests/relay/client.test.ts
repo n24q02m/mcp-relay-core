@@ -2,7 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { encrypt } from '../../src/crypto/aes.js'
 import { deriveSharedSecret, exportPublicKey, generateKeyPair } from '../../src/crypto/ecdh.js'
 import { deriveAesKey } from '../../src/crypto/kdf.js'
-import { createSession, generatePassphrase, pollForResult } from '../../src/relay/client.js'
+import {
+  createSession,
+  generatePassphrase,
+  pollForResponses,
+  pollForResult,
+  sendMessage
+} from '../../src/relay/client.js'
 import { WORDLIST } from '../../src/relay/wordlist.js'
 import type { RelayConfigSchema } from '../../src/schema/types.js'
 
@@ -270,5 +276,87 @@ describe('pollForResult', () => {
     const result = await pollForResult('https://relay.example.com', session, 10, 5000)
     expect(result).toEqual({ key: 'value' })
     expect(callCount).toBe(3) // 2 x 202, then 1 x 200
+  })
+})
+
+describe('sendMessage', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('should POST message and return messageId', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ id: 'msg-123' }), { status: 201 }))
+
+    const messageId = await sendMessage('https://relay.example.com', 'session-123', {
+      type: 'info',
+      text: 'Hello'
+    })
+
+    expect(messageId).toBe('msg-123')
+    expect(fetch).toHaveBeenCalledWith('https://relay.example.com/api/sessions/session-123/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'info', text: 'Hello' })
+    })
+  })
+
+  it('should throw on non-ok response', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 500 }))
+
+    await expect(
+      sendMessage('https://relay.example.com', 'session-123', {
+        type: 'info',
+        text: 'Hello'
+      })
+    ).rejects.toThrow('Failed to send message: 500')
+  })
+})
+
+describe('pollForResponses', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('should poll with messageId query parameter and return value when found', async () => {
+    let callCount = 0
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      callCount++
+      const urlObj = new URL(url.toString())
+      expect(urlObj.searchParams.get('messageId')).toBe('msg-123')
+
+      if (callCount === 1) {
+        return new Response(JSON.stringify({ responses: [] }), { status: 200 })
+      }
+      return new Response(
+        JSON.stringify({
+          responses: [{ messageId: 'msg-123', value: 'secret-response' }]
+        }),
+        { status: 200 }
+      )
+    })
+
+    const value = await pollForResponses('https://relay.example.com', 'session-123', 'msg-123', 10, 5000)
+    expect(value).toBe('secret-response')
+    expect(callCount).toBe(2)
+  })
+
+  it('should throw on timeout', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+      return new Response(JSON.stringify({ responses: [] }), { status: 200 })
+    })
+
+    await expect(pollForResponses('https://relay.example.com', 'session-123', 'msg-123', 10, 50)).rejects.toThrow(
+      'Timed out waiting for response'
+    )
+  })
+
+  it('should throw on non-ok response', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+      return new Response('', { status: 500 })
+    })
+
+    await expect(pollForResponses('https://relay.example.com', 'session-123', 'msg-123', 10, 5000)).rejects.toThrow(
+      'Failed to poll responses: 500'
+    )
   })
 })
