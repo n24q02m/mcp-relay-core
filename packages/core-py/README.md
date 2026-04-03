@@ -15,13 +15,14 @@ pip install mcp-relay-core
 ```python
 from mcp_relay_core import resolve_config
 
-result = resolve_config("my-server", ["api_key", "endpoint"])
+async def load():
+    result = await resolve_config("my-server", ["api_key", "endpoint"])
 
-if result.config:
-    print(f"Config loaded from {result.source}: {result.config}")
-else:
-    # No config found -- trigger relay setup
-    pass
+    if result.config:
+        print(f"Config loaded from {result.source}: {result.config}")
+    else:
+        # No config found -- trigger relay setup
+        pass
 ```
 
 ### Relay session (interactive credential setup)
@@ -45,7 +46,7 @@ async def setup():
     print(f"Open this URL to enter credentials: {session.relay_url}")
 
     credentials = await poll_for_result("https://relay.example.com", session)
-    write_config("my-server", credentials)
+    await write_config("my-server", credentials)
 
 asyncio.run(setup())
 ```
