@@ -42,16 +42,9 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Generate GitHub App Token
-        id: app-token
-        uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3
-        with:
-          app-id: ${{ vars.CI_APP_ID }}
-          private-key: ${{ secrets.CI_APP_KEY }}
-
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          token: ${{ steps.app-token.outputs.token }}
+          token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
 
       - uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4
