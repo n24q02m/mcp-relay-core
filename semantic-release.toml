@@ -1,13 +1,27 @@
 [semantic_release]
 version_toml = ["packages/core-py/pyproject.toml:project.version"]
-# NOTE: version_pattern for JSON doesn't work reliably with PSR v10
-# (colon in regex conflicts with filepath:pattern separator).
-# npm package versions are injected from PSR outputs in cd.yml instead.
+assets = ["packages/core-ts/package.json", "packages/relay-server/package.json"]
+build_command = """
+python -c "
+import json, os
+v = os.environ['NEW_VERSION']
+for p in ['packages/core-ts/package.json', 'packages/relay-server/package.json']:
+    with open(p, 'r') as f:
+        d = json.load(f)
+    d['version'] = v
+    with open(p, 'w') as f:
+        json.dump(d, f, indent=2)
+        f.write('\n')
+"
+"""
 tag_format = "v{version}"
 commit_message = "chore(release): v{version}"
 major_on_zero = false
 
 [semantic_release.changelog]
+# PSR v10: Move changelog_file to default_templates to avoid deprecation warning
+
+[semantic_release.changelog.default_templates]
 changelog_file = "CHANGELOG.md"
 
 [semantic_release.remote]
