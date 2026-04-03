@@ -1,3 +1,4 @@
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -11,6 +12,14 @@ import {
   setConfigPath,
   writeConfig
 } from '../../src/storage/config-file.js'
+import {
+  decryptData,
+  deriveFileKey,
+  encryptData,
+  LEGACY_PBKDF2_ITERATIONS,
+  PBKDF2_ITERATIONS
+} from '../../src/storage/encryption.js'
+import { getMachineId, getUsername } from '../../src/storage/machine-id.js'
 
 let tempDir: string
 
@@ -77,7 +86,6 @@ describe('deleteConfig', () => {
     await writeConfig('telegram', { botToken: 'tok' })
     await deleteConfig('telegram')
 
-    const { existsSync } = await import('node:fs')
     expect(existsSync(join(tempDir, 'config.enc'))).toBe(false)
   })
 
@@ -144,5 +152,31 @@ describe('exportConfig + importConfig', () => {
     await importConfig('pass', exported)
     expect(await readConfig('local-server')).toEqual({ key: 'local-val' })
     expect(await readConfig('remote-server')).toEqual({ key: 'remote-val' })
+  })
+})
+
+describe('config file migration', () => {
+  it('automatically migrates legacy config to new iteration count', async () => {
+    const configPath = join(tempDir, 'config.enc')
+    const [machineId, username] = await Promise.all([getMachineId(), getUsername()])
+    const legacyKey = await deriveFileKey(machineId, username, LEGACY_PBKDF2_ITERATIONS)
+    const store = { version: 1, servers: { legacy: { key: 'value' } } }
+    const encrypted = await encryptData(legacyKey, JSON.stringify(store))
+
+    // Manually write the legacy-encrypted file
+    writeFileSync(configPath, encrypted)
+
+    // Reading the config should trigger migration
+    const config = await readConfig('legacy')
+    expect(config).toEqual({ key: 'value' })
+
+    // Verify the file was re-encrypted with the new iteration count
+    const newData = readFileSync(configPath)
+    const currentKey = await deriveFileKey(machineId, username, PBKDF2_ITERATIONS)
+    const decrypted = await decryptData(currentKey, newData)
+    expect(JSON.parse(decrypted)).toEqual(store)
+
+    // Decrypting with legacy key should now fail
+    await expect(decryptData(legacyKey, newData)).rejects.toThrow()
   })
 })

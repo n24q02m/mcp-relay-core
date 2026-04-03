@@ -2,7 +2,14 @@ import { existsSync } from 'node:fs'
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import envPaths from 'env-paths'
-import { decryptData, deriveFileKey, derivePassphraseKey, encryptData } from './encryption.js'
+import {
+  decryptData,
+  deriveFileKey,
+  derivePassphraseKey,
+  encryptData,
+  LEGACY_PBKDF2_ITERATIONS,
+  PBKDF2_ITERATIONS
+} from './encryption.js'
 import { getMachineId, getUsername } from './machine-id.js'
 
 const paths = envPaths('mcp', { suffix: '' })
@@ -50,10 +57,29 @@ async function loadStore(): Promise<ConfigStore> {
   if (!existsSync(configPath)) {
     return { version: 1, servers: {} }
   }
-  const key = await getKey()
+
+  const [machineId, username] = await Promise.all([getMachineId(), getUsername()])
   const data = await readFile(configPath)
-  const json = await decryptData(key, data)
-  return JSON.parse(json) as ConfigStore
+
+  try {
+    // Try with current iterations
+    const key = await deriveFileKey(machineId, username, PBKDF2_ITERATIONS)
+    const json = await decryptData(key, data)
+    return JSON.parse(json) as ConfigStore
+  } catch (err) {
+    try {
+      // Fallback to legacy iterations
+      const legacyKey = await deriveFileKey(machineId, username, LEGACY_PBKDF2_ITERATIONS)
+      const json = await decryptData(legacyKey, data)
+      const store = JSON.parse(json) as ConfigStore
+      // Auto-migrate to current iterations
+      await saveStore(store)
+      return store
+    } catch {
+      // If legacy also fails, throw the original error
+      throw err
+    }
+  }
 }
 
 async function saveStore(store: ConfigStore): Promise<void> {
@@ -104,8 +130,18 @@ export async function exportConfig(passphrase: string): Promise<Buffer> {
 }
 
 export async function importConfig(passphrase: string, data: Buffer): Promise<void> {
-  const key = await derivePassphraseKey(passphrase)
-  const json = await decryptData(key, data)
+  let json: string
+  try {
+    const key = await derivePassphraseKey(passphrase, PBKDF2_ITERATIONS)
+    json = await decryptData(key, data)
+  } catch (err) {
+    try {
+      const legacyKey = await derivePassphraseKey(passphrase, LEGACY_PBKDF2_ITERATIONS)
+      json = await decryptData(legacyKey, data)
+    } catch {
+      throw err
+    }
+  }
   const imported = JSON.parse(json) as ConfigStore
 
   const store = await loadStore()

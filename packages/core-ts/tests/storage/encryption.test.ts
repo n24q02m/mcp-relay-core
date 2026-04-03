@@ -80,3 +80,31 @@ describe('encrypt + decrypt roundtrip', () => {
     await expect(decryptData(key2, encrypted)).rejects.toThrow()
   })
 })
+
+describe('PBKDF2 iteration migration', () => {
+  it('derives different keys for different iteration counts', async () => {
+    const key1 = await deriveFileKey('m', 'u', 100_000)
+    const key2 = await deriveFileKey('m', 'u', 600_000)
+
+    const encrypted = await encryptData(key1, 'secret')
+    await expect(decryptData(key2, encrypted)).rejects.toThrow()
+  })
+
+  it('can decrypt data encrypted with legacy iterations if specified', async () => {
+    const legacyIterations = 100_000
+    const currentIterations = 600_000
+
+    const legacyKey = await deriveFileKey('m', 'u', legacyIterations)
+    const currentKey = await deriveFileKey('m', 'u', currentIterations)
+
+    const plaintext = 'migration test'
+    const encryptedWithLegacy = await encryptData(legacyKey, plaintext)
+
+    // Decrypting with current key should fail
+    await expect(decryptData(currentKey, encryptedWithLegacy)).rejects.toThrow()
+
+    // Decrypting with explicitly derived legacy key should work
+    const decrypted = await decryptData(legacyKey, encryptedWithLegacy)
+    expect(decrypted).toBe(plaintext)
+  })
+})

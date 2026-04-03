@@ -101,3 +101,31 @@ class TestEncryptDecryptRoundtrip:
         encrypted = encrypt_data(key1, "secret data")
         with pytest.raises(InvalidTag):
             decrypt_data(key2, encrypted)
+
+
+class TestPBKDF2Migration:
+    def test_derives_different_keys_for_different_iteration_counts(self):
+        key1 = derive_file_key("m", "u", iterations=100_000)
+        key2 = derive_file_key("m", "u", iterations=600_000)
+
+        encrypted = encrypt_data(key1, "secret")
+        with pytest.raises(InvalidTag):
+            decrypt_data(key2, encrypted)
+
+    def test_can_decrypt_data_encrypted_with_legacy_iterations_if_specified(self):
+        legacy_iterations = 100_000
+        current_iterations = 600_000
+
+        legacy_key = derive_file_key("m", "u", iterations=legacy_iterations)
+        current_key = derive_file_key("m", "u", iterations=current_iterations)
+
+        plaintext = "migration test"
+        encrypted_with_legacy = encrypt_data(legacy_key, plaintext)
+
+        # Decrypting with current key should fail
+        with pytest.raises(InvalidTag):
+            decrypt_data(current_key, encrypted_with_legacy)
+
+        # Decrypting with explicitly derived legacy key should work
+        decrypted = decrypt_data(legacy_key, encrypted_with_legacy)
+        assert decrypted == plaintext
