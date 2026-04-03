@@ -6,6 +6,7 @@ from cryptography.exceptions import InvalidTag
 from mcp_relay_core.storage.encryption import (
     decrypt_data,
     derive_file_key,
+    derive_passphrase_key,
     encrypt_data,
 )
 
@@ -37,6 +38,27 @@ class TestDeriveFileKey:
         key2 = derive_file_key("machine-1", "bob")
 
         encrypted = encrypt_data(key1, "secret")
+        with pytest.raises(InvalidTag):
+            decrypt_data(key2, encrypted)
+
+
+class TestDerivePassphraseKey:
+    def test_returns_32_byte_key(self):
+        key = derive_passphrase_key("my secret passphrase")
+        assert isinstance(key, bytes)
+        assert len(key) == 32
+
+    def test_same_passphrase_produces_same_key(self):
+        passphrase = "password123"
+        key1 = derive_passphrase_key(passphrase)
+        key2 = derive_passphrase_key(passphrase)
+        assert key1 == key2
+
+    def test_different_passphrase_produces_different_key(self):
+        key1 = derive_passphrase_key("passphrase-A")
+        key2 = derive_passphrase_key("passphrase-B")
+
+        encrypted = encrypt_data(key1, "top secret")
         with pytest.raises(InvalidTag):
             decrypt_data(key2, encrypted)
 

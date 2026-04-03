@@ -1,9 +1,12 @@
 """Tests for encrypted config file management."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 from cryptography.exceptions import InvalidTag
 
 from mcp_relay_core.storage.config_file import (
+    _with_retry,
     delete_config,
     export_config,
     import_config,
@@ -20,6 +23,57 @@ def _temp_config(tmp_path):
     set_config_path(config_path)
     yield tmp_path
     set_config_path(None)
+
+
+class TestWithRetry:
+    def test_success_on_first_attempt(self):
+        fn = MagicMock(return_value="success")
+        result = _with_retry(fn)
+        assert result == "success"
+        assert fn.call_count == 1
+
+    def test_success_after_retries(self):
+        fn = MagicMock()
+        fn.side_effect = [OSError(11, "EAGAIN"), OSError(16, "EBUSY"), "success"]
+
+        with patch("time.sleep") as mock_sleep:
+            result = _with_retry(fn)
+            assert result == "success"
+            assert fn.call_count == 3
+            assert mock_sleep.call_count == 2
+            mock_sleep.assert_any_call(0.1)
+            mock_sleep.assert_any_call(0.2)
+
+    def test_exhaust_retries_raises_last_error(self):
+        fn = MagicMock()
+        fn.side_effect = OSError(35, "EWOULDBLOCK")
+
+        with patch("time.sleep"):
+            with pytest.raises(OSError) as excinfo:
+                _with_retry(fn)
+            assert excinfo.value.errno == 35
+            assert fn.call_count == 3
+
+    def test_immediate_raise_on_non_retryable_oserror(self):
+        fn = MagicMock()
+        fn.side_effect = OSError(1, "EPERM")
+
+        with patch("time.sleep") as mock_sleep:
+            with pytest.raises(OSError) as excinfo:
+                _with_retry(fn)
+            assert excinfo.value.errno == 1
+            assert fn.call_count == 1
+            assert mock_sleep.call_count == 0
+
+    def test_immediate_raise_on_other_exception(self):
+        fn = MagicMock()
+        fn.side_effect = ValueError("wrong value")
+
+        with patch("time.sleep") as mock_sleep:
+            with pytest.raises(ValueError, match="wrong value"):
+                _with_retry(fn)
+            assert fn.call_count == 1
+            assert mock_sleep.call_count == 0
 
 
 class TestWriteAndReadConfig:

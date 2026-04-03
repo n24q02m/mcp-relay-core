@@ -73,7 +73,7 @@ describe('createSession', () => {
   })
 
   it('should call POST /api/sessions', async () => {
-    const session = await createSession('https://relay.example.com', 'test-server', mockSchema)
+    const _session = await createSession('https://relay.example.com', 'test-server', mockSchema)
 
     expect(fetch).toHaveBeenCalledOnce()
     const call = vi.mocked(fetch).mock.calls[0]
@@ -126,8 +126,8 @@ describe('pollForResult', () => {
 
     const browserPub = await exportPublicKey(browserKeyPair.publicKey)
 
-    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, opts) => {
-      const urlStr = typeof url === 'string' ? url : url.toString()
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_url, opts) => {
+      const _urlStr = typeof _url === 'string' ? _url : _url.toString()
       if (opts?.method === 'DELETE') {
         return new Response('', { status: 204 })
       }
@@ -155,6 +155,34 @@ describe('pollForResult', () => {
     // Session kept alive for bidirectional messaging (no DELETE on success)
     const deleteCalls = vi.mocked(fetch).mock.calls.filter((c) => c[1]?.method === 'DELETE')
     expect(deleteCalls).toHaveLength(0)
+  })
+
+  it('should handle cleanup failure gracefully and throw RELAY_SKIPPED when status is skipped', async () => {
+    const cliKeyPair = await generateKeyPair()
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_url, opts) => {
+      if (opts?.method === 'DELETE') {
+        return Promise.reject(new Error('Network error during cleanup'))
+      }
+      return new Response(
+        JSON.stringify({
+          status: 'skipped'
+        }),
+        { status: 200 }
+      )
+    })
+
+    const session = {
+      sessionId: 'test-session-skipped',
+      keyPair: cliKeyPair,
+      passphrase: 'alpha-bravo-charlie-delta',
+      relayUrl: 'https://relay.example.com/setup?s=test-session-skipped'
+    }
+
+    await expect(pollForResult('https://relay.example.com', session, 10, 5000)).rejects.toThrow('RELAY_SKIPPED')
+    expect(fetch).toHaveBeenCalledWith('https://relay.example.com/api/sessions/test-session-skipped', {
+      method: 'DELETE'
+    })
   })
 
   it('should throw on 404 (session expired)', async () => {

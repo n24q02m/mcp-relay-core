@@ -46,7 +46,6 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
         throw new Error('Please fill in at least one API key')
       }
 
-      console.log('Key length (base64url):', cliPubKeyB64?.length, 'Passphrase:', passphrase ? 'SET' : 'EMPTY')
       let cliPubKey, browserKeyPair, sharedSecret, aesKey
       try { cliPubKey = await importPublicKey(cliPubKeyB64) } catch (e) {
         throw new Error(`Key import failed (len=${cliPubKeyB64?.length}): ${e.name || e.message}`)
