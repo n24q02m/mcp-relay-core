@@ -26,7 +26,9 @@ export async function importPublicKey(base64url) {
       const fallback = new Uint8Array(binary.length)
       for (let i = 0; i < binary.length; i++) fallback[i] = binary.charCodeAt(i)
       if (fallback.length === 65 && fallback[0] === 0x04) raw = fallback
-    } catch { /* use original */ }
+    } catch {
+      /* use original */
+    }
   }
 
   if (raw.length !== 65 || raw[0] !== 0x04) {
@@ -80,8 +82,9 @@ export function toBase64(uint8) {
   return btoa(chunks.join(''))
 }
 
+const TO_BASE64URL_MAP = { '+': '-', '/': '_' }
 function toBase64url(uint8) {
-  return toBase64(uint8).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+  return toBase64(uint8).replace(/[+/=]/g, (m) => TO_BASE64URL_MAP[m] ?? '')
 }
 
 const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
