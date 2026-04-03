@@ -7,7 +7,6 @@ export function renderFields(container, fields) {
     const label = document.createElement('label')
     label.textContent = field.label
     label.htmlFor = field.key
-    div.appendChild(label)
 
     const input = document.createElement('input')
     input.type = field.type === 'password' ? 'password' : field.type === 'select' ? 'text' : field.type
@@ -15,6 +14,16 @@ export function renderFields(container, fields) {
     input.name = field.key
     input.placeholder = field.placeholder || ''
     input.required = field.required !== false
+
+    if (input.required) {
+      const reqIndicator = document.createElement('span')
+      reqIndicator.textContent = ' *'
+      reqIndicator.style.color = '#c5221f'
+      reqIndicator.setAttribute('aria-hidden', 'true')
+      label.appendChild(reqIndicator)
+    }
+
+    div.appendChild(label)
     div.appendChild(input)
 
     if (field.helpText) {
@@ -26,8 +35,10 @@ export function renderFields(container, fields) {
       const link = document.createElement('a')
       link.href = field.helpUrl
       link.target = '_blank'
+      link.rel = 'noopener noreferrer'
       link.textContent = 'How to get this?'
       link.className = 'help-link'
+      link.setAttribute('aria-label', 'How to get this? (opens in a new tab)')
       div.appendChild(link)
     }
 
