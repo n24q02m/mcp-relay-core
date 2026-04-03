@@ -87,6 +87,7 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
 
   const skipBtn = document.createElement('button')
   skipBtn.type = 'button'
+  skipBtn.id = 'skip-btn'
   skipBtn.textContent = 'Skip Setup (use defaults)'
   skipBtn.style.cssText = 'background: transparent; color: #888; border: 1px solid #555; border-radius: 4px; padding: 8px 16px; cursor: pointer; width: 100%; margin-top: 8px;'
   skipBtn.addEventListener('click', async () => {
@@ -94,11 +95,13 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
     skipBtn.textContent = 'Skipping...'
     try {
       const response = await fetch(`/api/sessions/${sessionId}/skip`, { method: 'POST' })
-      if (response.ok) {
-        showStatus(document.getElementById('status-container'), 'Setup skipped. Server will use default settings.', 'info')
-        document.getElementById('setup-form').style.display = 'none'
+      if (!response.ok) {
+        throw new Error(`Skip failed (${response.status})`)
       }
+      showStatus(document.getElementById('status-container'), 'Setup skipped. Server will use default settings.', 'info')
+      document.getElementById('setup-form').style.display = 'none'
     } catch (err) {
+      showStatus(document.getElementById('status-container'), err.message || String(err), 'error')
       skipBtn.disabled = false
       skipBtn.textContent = 'Skip Setup (use defaults)'
     }
