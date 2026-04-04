@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.3.1 (2026-04-04)
+
+### Bug Fixes
+
+- PBKDF2 600K iterations with auto-migration + field-level input validation
+  ([#113](https://github.com/n24q02m/mcp-relay-core/pull/113),
+  [`15d34a8`](https://github.com/n24q02m/mcp-relay-core/commit/15d34a81896f02809853344e3ad5b8733fede869))
+
+
 ## v1.3.0 (2026-04-03)
 
 ### Bug Fixes
