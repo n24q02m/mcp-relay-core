@@ -45,7 +45,7 @@ describe('generatePassphrase', () => {
       let valid = true
 
       while (remaining.length > 0) {
-        const matchingWord = sortedWords.find(w => remaining.startsWith(w + '-') || remaining === w)
+        const matchingWord = sortedWords.find((w) => remaining.startsWith(`${w}-`) || remaining === w)
         if (!matchingWord) {
           valid = false
           break
