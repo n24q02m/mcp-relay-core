@@ -32,6 +32,16 @@ sessionsRouter.post('/', (req: Request, res: Response) => {
     return
   }
 
+  if (sessionId.length > 256) {
+    res.status(400).json({ error: 'sessionId too long (max 256 chars)' })
+    return
+  }
+
+  if (serverName.length > 256) {
+    res.status(400).json({ error: 'serverName too long (max 256 chars)' })
+    return
+  }
+
   if (schema !== undefined && JSON.stringify(schema).length > 65536) {
     res.status(400).json({ error: 'schema too large (max 64KB)' })
     return
@@ -84,6 +94,11 @@ sessionsRouter.post('/:id/result', (req: Request, res: Response) => {
     return
   }
 
+  if (browserPub.length > 4096 || ciphertext.length > 4096 || iv.length > 4096 || tag.length > 4096) {
+    res.status(400).json({ error: 'result field(s) too large (max 4KB each)' })
+    return
+  }
+
   const session = getSession(paramId(req))
   if (!session) {
     res.status(404).json({ error: 'Session not found or expired' })
@@ -128,6 +143,16 @@ sessionsRouter.post('/:id/messages', (req: Request, res: Response) => {
     return
   }
 
+  if (text.length > 10240) {
+    res.status(400).json({ error: 'text too long (max 10KB)' })
+    return
+  }
+
+  if (data !== undefined && JSON.stringify(data).length > 65536) {
+    res.status(400).json({ error: 'data too large (max 64KB)' })
+    return
+  }
+
   const session = getSession(paramId(req))
   if (!session) {
     res.status(404).json({ error: 'Session not found or expired' })
@@ -168,6 +193,11 @@ sessionsRouter.post('/:id/responses', (req: Request, res: Response) => {
 
   if (!messageId || value === undefined) {
     res.status(400).json({ error: 'messageId and value are required' })
+    return
+  }
+
+  if (value.length > 65536) {
+    res.status(400).json({ error: 'value too large (max 64KB)' })
     return
   }
 
