@@ -26,6 +26,9 @@ h2 { font-size: 1.1rem; margin-bottom: 1rem; color: #444; font-weight: normal; }
 .field input[type="number"]::-webkit-inner-spin-button,
 .field input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .field input:focus { border-color: #333; outline: none; }
+.field input:focus-visible { outline: 2px solid #0066cc; outline-offset: 1px; }
+
+:focus-visible { outline: 2px solid #0066cc; outline-offset: 2px; border-radius: 2px; }
 .field small { display: block; margin-top: 0.2rem; color: #666; font-size: 0.8rem; }
 .help-link { display: inline-block; margin-top: 0.2rem; font-size: 0.8rem; color: #0066cc; }
 
@@ -78,4 +81,5 @@ button[type="submit"]:disabled { background: #999; cursor: not-allowed; }
   .capability-info { background: #2a2a2a; border-color: #444; }
   .capability-info h3 { color: #ccc; }
   .priority-chain { color: #6db3f2; }
+  :focus-visible, .field input:focus-visible { outline-color: #6db3f2; }
 }
