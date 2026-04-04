@@ -36,12 +36,27 @@ describe('generatePassphrase', () => {
   })
 
   it('should only use words from the WORDLIST', () => {
-    const wordSet = new Set(WORDLIST)
+    // Sort words by length descending so that longer prefixes are matched first
+    const sortedWords = [...WORDLIST].sort((a, b) => b.length - a.length)
+
     for (let i = 0; i < 20; i++) {
-      const words = generatePassphrase().split('-')
-      for (const w of words) {
-        expect(wordSet.has(w)).toBe(true)
+      const passphrase = generatePassphrase()
+      let remaining = passphrase
+      let valid = true
+
+      while (remaining.length > 0) {
+        const matchingWord = sortedWords.find((w) => remaining.startsWith(`${w}-`) || remaining === w)
+        if (!matchingWord) {
+          valid = false
+          break
+        }
+        remaining = remaining.substring(matchingWord.length)
+        if (remaining.startsWith('-')) {
+          remaining = remaining.substring(1)
+        }
       }
+
+      expect(valid).toBe(true)
     }
   })
 
