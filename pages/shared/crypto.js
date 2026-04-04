@@ -82,9 +82,9 @@ export function toBase64(uint8) {
   return btoa(chunks.join(''))
 }
 
-const TO_BASE64URL_MAP = { '+': '-', '/': '_' }
+const TO_BASE64URL_MAP = { '+': '-', '/': '_', '=': '' }
 function toBase64url(uint8) {
-  return toBase64(uint8).replace(/[+/=]/g, (m) => TO_BASE64URL_MAP[m] ?? '')
+  return toBase64(uint8).replace(/[+\/=]/g, (m) => TO_BASE64URL_MAP[m] ?? m)
 }
 
 const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
