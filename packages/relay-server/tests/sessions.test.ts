@@ -69,6 +69,81 @@ describe('POST /api/sessions', () => {
   })
 })
 
+describe('Input size validation', () => {
+  it('rejects oversized sessionId (400)', async () => {
+    const res = await fetch(`${baseUrl}/api/sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: 'a'.repeat(300), serverName: 'test' })
+    })
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toContain('sessionId too long')
+  })
+
+  it('rejects oversized serverName (400)', async () => {
+    const res = await fetch(`${baseUrl}/api/sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: 'test', serverName: 'a'.repeat(300) })
+    })
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toContain('serverName too long')
+  })
+
+  it('rejects oversized result fields (400)', async () => {
+    await fetch(`${baseUrl}/api/sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: 'size-1', serverName: 'test' })
+    })
+
+    const res = await fetch(`${baseUrl}/api/sessions/size-1/result`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ browserPub: 'a'.repeat(5000), ciphertext: 'ct', iv: 'iv', tag: 'tag' })
+    })
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toContain('too large')
+  })
+
+  it('rejects oversized message text (400)', async () => {
+    await fetch(`${baseUrl}/api/sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: 'msg-size-1', serverName: 'test' })
+    })
+
+    const res = await fetch(`${baseUrl}/api/sessions/msg-size-1/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'info', text: 'a'.repeat(20000) })
+    })
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toContain('text too long')
+  })
+
+  it('rejects oversized response value (400)', async () => {
+    await fetch(`${baseUrl}/api/sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: 'resp-size-1', serverName: 'test' })
+    })
+
+    const res = await fetch(`${baseUrl}/api/sessions/resp-size-1/responses`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messageId: 'm1', value: 'a'.repeat(70000) })
+    })
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toContain('value too large')
+  })
+})
+
 describe('GET /api/sessions/:id', () => {
   it('returns 202 when session is pending', async () => {
     await fetch(`${baseUrl}/api/sessions`, {
