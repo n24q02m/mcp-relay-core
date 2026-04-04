@@ -37,7 +37,7 @@ sessionsRouter.post('/', (req: Request, res: Response) => {
     return
   }
 
-  const sourceIp = req.ip ?? 'unknown'
+  const sourceIp = req.ip ?? req.socket.remoteAddress ?? 'unknown'
   const session = createSession(sessionId, serverName, schema, sourceIp)
 
   if (!session) {
