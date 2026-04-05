@@ -7,7 +7,7 @@ import asyncio
 import json
 from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from platformdirs import user_config_dir
 
@@ -53,15 +53,17 @@ async def _with_retry[T](fn: Callable[[], T | Awaitable[T]]) -> T:
         try:
             result = fn()
             if asyncio.iscoroutine(result):
-                return await result
-            return result  # type: ignore[return-value]
+                return await cast(Awaitable[T], result)
+            return cast(T, result)
         except OSError as err:
             is_busy = getattr(err, "errno", None) in (11, 16, 35)  # EAGAIN, EBUSY, etc
             if not is_busy or attempt == _MAX_RETRIES - 1:
                 raise
             await asyncio.sleep(_BASE_DELAY_S * (2**attempt))
-    # Logically unreachable because the loop raises on the last attempt.
-    # We omit the RuntimeError here as per instructions to remove unreachable code.
+
+    # Logically unreachable
+    msg = "Unreachable"
+    raise RuntimeError(msg)
 
 
 async def _load_store() -> dict[str, Any]:
