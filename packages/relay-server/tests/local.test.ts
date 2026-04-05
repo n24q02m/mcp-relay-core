@@ -28,4 +28,20 @@ describe('startLocalRelay', () => {
 
     fs.unlinkSync(testFilePath)
   })
+
+  it('does not have a permissive CORS configuration by default', async () => {
+    const pagesDir = path.join(__dirname, 'fixtures', 'pages')
+    if (!fs.existsSync(pagesDir)) {
+      fs.mkdirSync(pagesDir, { recursive: true })
+    }
+    const server = await startLocalRelay(pagesDir)
+
+    const response = await fetch(`${server.url}/api/sessions`, {
+      method: 'GET',
+      headers: { Origin: 'http://malicious.com' }
+    })
+    expect(response.headers.get('access-control-allow-origin')).toBeNull()
+
+    server.close()
+  })
 })
