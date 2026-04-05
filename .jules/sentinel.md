@@ -2,3 +2,8 @@
 **Vulnerability:** The Express API (`packages/relay-server`) lacked essential HTTP security headers like `Content-Security-Policy`, `X-Content-Type-Options`, `X-Frame-Options`, and `Strict-Transport-Security`.
 **Learning:** Despite the unique zero-knowledge architecture (where sensitive data is encrypted by the client and not readable by the server), defense in depth remains important. Even opaque APIs could be subject to MIME sniffing or clickjacking if served without appropriate headers.
 **Prevention:** Always use the `helmet` package to apply a baseline set of security headers on Express servers, even those not directly serving HTML pages.
+
+## 2024-05-20 - Type Confusion in Input Validation for Express APIs
+**Vulnerability:** Express APIs handling POST requests directly utilized `.length` property checks on objects extracted from `req.body` without strict type validation (e.g., `sessionId.length > 256`). By default, Express `express.json()` dynamically parses arrays and objects, which can bypass `.length` checks when arrays are passed (since `.length` would evaluate the number of elements instead of string character count).
+**Learning:** When dealing with dynamic parsers like `express.json()`, validating size via `.length` is insufficient unless the expected type (usually `string`) is strictly verified beforehand. Failure to do so leads to type confusion, where properties could be treated and persisted improperly.
+**Prevention:** Always use a type check (e.g., `typeof field === 'string'`) before applying a length constraint. Additionally, defensive checks (like wrapping `JSON.stringify` inside `try...catch`) should be put in place to handle inputs causing unhandled exceptions.
