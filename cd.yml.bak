@@ -137,7 +137,7 @@ jobs:
   publish-pypi:
     name: Publish to PyPI
     needs: release
-    if: needs.release.outputs.released == "true"
+    if: needs.release.outputs.released == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
@@ -151,19 +151,24 @@ jobs:
 
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
 
-      - name: Build and publish to PyPI
+      - name: Build and publish
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
         run: |
           cd packages/core-py
           uv build
           # Check if version already exists on PyPI
-          VERSION=$(grep -m 1 "version =" pyproject.toml | cut -d "\"" -f 2)
+          VERSION=$(grep -m 1 'version =' pyproject.toml | cut -d '"' -f 2)
           if curl -s -f "https://pypi.org/pypi/mcp-relay-core/$VERSION/json" > /dev/null; then
             echo "mcp-relay-core@$VERSION already published, skipping"
           else
             uv publish
           fi
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
+          cd packages/core-py
+          uv build
+          uv publish
 
   # ============================================================================
   # Build Docker (relay-server only)
