@@ -22,13 +22,13 @@ export const sessionsRouter: ReturnType<typeof Router> = Router()
 
 sessionsRouter.post('/', (req: Request, res: Response) => {
   const { sessionId, serverName, schema } = req.body as {
-    sessionId?: string
-    serverName?: string
+    sessionId?: unknown
+    serverName?: unknown
     schema?: unknown
   }
 
-  if (!sessionId || !serverName) {
-    res.status(400).json({ error: 'sessionId and serverName are required' })
+  if (typeof sessionId !== 'string' || typeof serverName !== 'string') {
+    res.status(400).json({ error: 'sessionId and serverName are required strings' })
     return
   }
 
@@ -42,9 +42,16 @@ sessionsRouter.post('/', (req: Request, res: Response) => {
     return
   }
 
-  if (schema !== undefined && JSON.stringify(schema).length > 65536) {
-    res.status(400).json({ error: 'schema too large (max 64KB)' })
-    return
+  if (schema !== undefined) {
+    try {
+      if (JSON.stringify(schema).length > 65536) {
+        res.status(400).json({ error: 'schema too large (max 64KB)' })
+        return
+      }
+    } catch {
+      res.status(400).json({ error: 'invalid schema' })
+      return
+    }
   }
 
   const sourceIp = req.ip ?? req.socket.remoteAddress ?? 'unknown'
@@ -83,14 +90,19 @@ sessionsRouter.get('/:id', (req: Request, res: Response) => {
 
 sessionsRouter.post('/:id/result', (req: Request, res: Response) => {
   const { browserPub, ciphertext, iv, tag } = req.body as {
-    browserPub?: string
-    ciphertext?: string
-    iv?: string
-    tag?: string
+    browserPub?: unknown
+    ciphertext?: unknown
+    iv?: unknown
+    tag?: unknown
   }
 
-  if (!browserPub || !ciphertext || !iv || !tag) {
-    res.status(400).json({ error: 'browserPub, ciphertext, iv, and tag are required' })
+  if (
+    typeof browserPub !== 'string' ||
+    typeof ciphertext !== 'string' ||
+    typeof iv !== 'string' ||
+    typeof tag !== 'string'
+  ) {
+    res.status(400).json({ error: 'browserPub, ciphertext, iv, and tag are required strings' })
     return
   }
 
@@ -133,13 +145,19 @@ sessionsRouter.post('/:id/skip', (req: Request, res: Response) => {
 // Server pushes a message to the browser
 sessionsRouter.post('/:id/messages', (req: Request, res: Response) => {
   const { type, text, data } = req.body as {
-    type?: RelayMessage['type']
-    text?: string
-    data?: Record<string, unknown>
+    type?: unknown
+    text?: unknown
+    data?: unknown
   }
 
-  if (!type || !text) {
-    res.status(400).json({ error: 'type and text are required' })
+  if (typeof type !== 'string' || typeof text !== 'string') {
+    res.status(400).json({ error: 'type and text are required strings' })
+    return
+  }
+
+  const validTypes: RelayMessage['type'][] = ['info', 'oauth_device_code', 'input_required', 'complete', 'error']
+  if (!validTypes.includes(type as RelayMessage['type'])) {
+    res.status(400).json({ error: 'invalid message type' })
     return
   }
 
@@ -148,9 +166,16 @@ sessionsRouter.post('/:id/messages', (req: Request, res: Response) => {
     return
   }
 
-  if (data !== undefined && JSON.stringify(data).length > 65536) {
-    res.status(400).json({ error: 'data too large (max 64KB)' })
-    return
+  if (data !== undefined) {
+    try {
+      if (JSON.stringify(data).length > 65536) {
+        res.status(400).json({ error: 'data too large (max 64KB)' })
+        return
+      }
+    } catch {
+      res.status(400).json({ error: 'invalid data' })
+      return
+    }
   }
 
   const session = getSession(paramId(req))
@@ -160,7 +185,12 @@ sessionsRouter.post('/:id/messages', (req: Request, res: Response) => {
   }
 
   const messageId = crypto.randomUUID()
-  const message: RelayMessage = { id: messageId, type, text, data }
+  const message: RelayMessage = {
+    id: messageId,
+    type: type as RelayMessage['type'],
+    text,
+    data: data as Record<string, unknown>
+  }
   const success = addMessage(paramId(req), message)
   if (!success) {
     res.status(404).json({ error: 'Session not found or expired' })
@@ -187,12 +217,17 @@ sessionsRouter.get('/:id/messages', (req: Request, res: Response) => {
 // Browser sends a response to a message
 sessionsRouter.post('/:id/responses', (req: Request, res: Response) => {
   const { messageId, value } = req.body as {
-    messageId?: string
-    value?: string
+    messageId?: unknown
+    value?: unknown
   }
 
-  if (!messageId || value === undefined) {
-    res.status(400).json({ error: 'messageId and value are required' })
+  if (typeof messageId !== 'string' || typeof value !== 'string') {
+    res.status(400).json({ error: 'messageId and value are required strings' })
+    return
+  }
+
+  if (messageId.length > 256) {
+    res.status(400).json({ error: 'messageId too long (max 256 chars)' })
     return
   }
 
