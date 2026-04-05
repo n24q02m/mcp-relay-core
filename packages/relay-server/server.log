@@ -1,2 +1,0 @@
-$ tsx watch src/index.ts
-error: script "dev" exited with code 143
