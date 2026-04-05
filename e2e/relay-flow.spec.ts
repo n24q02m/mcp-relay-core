@@ -1,16 +1,16 @@
-import { test, expect } from '@playwright/test'
-import { resolve } from 'node:path'
 import { readFileSync } from 'node:fs'
-import { startLocalRelay } from '../packages/relay-server/src/local.ts'
+import { resolve } from 'node:path'
+import { expect, test } from '@playwright/test'
+import { decrypt } from '../packages/core-ts/src/crypto/aes.ts'
 import {
-  generateKeyPair,
-  exportPublicKey,
-  importPublicKey,
   deriveSharedSecret,
+  exportPublicKey,
+  generateKeyPair,
+  importPublicKey
 } from '../packages/core-ts/src/crypto/ecdh.ts'
 import { deriveAesKey } from '../packages/core-ts/src/crypto/kdf.ts'
-import { decrypt } from '../packages/core-ts/src/crypto/aes.ts'
 import { generatePassphrase } from '../packages/core-ts/src/relay/client.ts'
+import { startLocalRelay } from '../packages/relay-server/src/local.ts'
 
 const rootDir = resolve(process.cwd())
 const pagesDir = resolve(rootDir, 'pages')
@@ -31,9 +31,7 @@ test.describe('Relay Flow E2E', () => {
     relay?.close()
   })
 
-  test('full relay flow: CLI generates session -> browser encrypts -> CLI decrypts', async ({
-    page,
-  }) => {
+  test('full relay flow: CLI generates session -> browser encrypts -> CLI decrypts', async ({ page }) => {
     // 1. CLI side: generate keypair + passphrase + session
     const keyPair = await generateKeyPair()
     const pubKey = await exportPublicKey(keyPair.publicKey)
@@ -44,7 +42,7 @@ test.describe('Relay Flow E2E', () => {
     const createRes = await fetch(`${relay.url}/api/sessions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId, serverName: 'better-telegram-mcp', schema: {} }),
+      body: JSON.stringify({ sessionId, serverName: 'better-telegram-mcp', schema: {} })
     })
     expect(createRes.status).toBe(201)
 
@@ -80,7 +78,7 @@ test.describe('Relay Flow E2E', () => {
       aesKey,
       new Uint8Array(Buffer.from(ciphertext, 'base64')),
       new Uint8Array(Buffer.from(iv, 'base64')),
-      new Uint8Array(Buffer.from(tag, 'base64')),
+      new Uint8Array(Buffer.from(tag, 'base64'))
     )
     const config = JSON.parse(plaintext) as Record<string, string>
     expect(config.TELEGRAM_BOT_TOKEN).toBe('123456:ABC-DEF-test-token')
@@ -96,7 +94,7 @@ test.describe('Relay Flow E2E', () => {
     const createRes = await fetch(`${relay.url}/api/sessions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId, serverName: 'better-telegram-mcp', schema: {} }),
+      body: JSON.stringify({ sessionId, serverName: 'better-telegram-mcp', schema: {} })
     })
     expect(createRes.status).toBe(201)
 
@@ -116,8 +114,8 @@ test.describe('Relay Flow E2E', () => {
         browserPub: 'dummy',
         ciphertext: 'dummy',
         iv: 'dummy',
-        tag: 'dummy',
-      }),
+        tag: 'dummy'
+      })
     })
     expect(secondRes.status).toBe(409)
   })
@@ -171,22 +169,20 @@ test.describe('WebCrypto Parity', () => {
         const salt = new TextEncoder().encode(pass)
         const info = new TextEncoder().encode('mcp-relay')
 
-        const keyMaterial = await crypto.subtle.importKey('raw', sharedSecret, 'HKDF', false, [
-          'deriveKey',
-        ])
+        const keyMaterial = await crypto.subtle.importKey('raw', sharedSecret, 'HKDF', false, ['deriveKey'])
 
         const aesKey = await crypto.subtle.deriveKey(
           { name: 'HKDF', hash: 'SHA-256', salt, info },
           keyMaterial,
           { name: 'AES-GCM', length: 256 },
           true,
-          ['encrypt', 'decrypt'],
+          ['encrypt', 'decrypt']
         )
 
         const raw = await crypto.subtle.exportKey('raw', aesKey)
         return bytesToHex(raw)
       },
-      { sharedSecretHex: shared_secret_hex, pass: passphrase },
+      { sharedSecretHex: shared_secret_hex, pass: passphrase }
     )
 
     expect(browserDerivedHex).toBe(derived_key_hex)
@@ -219,8 +215,7 @@ test.describe('WebCrypto Parity', () => {
           return arr
         }
 
-        const bytesToHex = (buf: Uint8Array) =>
-          [...buf].map((b) => b.toString(16).padStart(2, '0')).join('')
+        const bytesToHex = (buf: Uint8Array) => [...buf].map((b) => b.toString(16).padStart(2, '0')).join('')
 
         const keyData = hexToBytes(keyHex)
         const iv = hexToBytes(ivHex)
@@ -236,10 +231,10 @@ test.describe('WebCrypto Parity', () => {
 
         return {
           ciphertext: bytesToHex(ct),
-          tag: bytesToHex(tag),
+          tag: bytesToHex(tag)
         }
       },
-      { keyHex: derived_key_hex, ivHex: iv_hex, plain: plaintext },
+      { keyHex: derived_key_hex, ivHex: iv_hex, plain: plaintext }
     )
 
     expect(browserResult.ciphertext).toBe(ciphertext_hex)

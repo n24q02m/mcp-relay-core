@@ -246,9 +246,9 @@ async def poll_for_responses(
                 raise RuntimeError(msg)
 
             body = response.json()
-            for resp in body.get("responses", []):
-                if resp.get("messageId") == message_id:
-                    return resp["value"]
+            value = body.get("responses", {}).get(message_id)
+            if value is not None:
+                return value
 
             await asyncio.sleep(interval_s)
 

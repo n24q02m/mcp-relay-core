@@ -7,7 +7,7 @@ export function parseFragment() {
   const params = new URLSearchParams(hash)
   return {
     publicKey: params.get('k'),
-    passphrase: decodeURIComponent(params.get('p') || ''),
+    passphrase: decodeURIComponent(params.get('p') || '')
   }
 }
 
@@ -22,7 +22,7 @@ export async function submitResult(sessionId, browserPub, ciphertext, iv, tag) {
     browserPub,
     ciphertext: toBase64(ciphertext),
     iv: toBase64(iv),
-    tag: toBase64(tag),
+    tag: toBase64(tag)
   })
 
   const maxRetries = 3
@@ -30,7 +30,7 @@ export async function submitResult(sessionId, browserPub, ciphertext, iv, tag) {
     const response = await fetch(`/api/sessions/${sessionId}/result`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body,
+      body
     })
     if (response.ok) return { ok: true }
 

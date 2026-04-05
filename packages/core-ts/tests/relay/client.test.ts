@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { encrypt } from '../../src/crypto/aes.js'
 import { deriveSharedSecret, exportPublicKey, generateKeyPair } from '../../src/crypto/ecdh.js'
 import { deriveAesKey } from '../../src/crypto/kdf.js'
-import { createSession, generatePassphrase, pollForResult } from '../../src/relay/client.js'
+import { createSession, generatePassphrase, pollForResponses, pollForResult } from '../../src/relay/client.js'
 import { WORDLIST } from '../../src/relay/wordlist.js'
 import type { RelayConfigSchema } from '../../src/schema/types.js'
 
@@ -270,5 +270,54 @@ describe('pollForResult', () => {
     const result = await pollForResult('https://relay.example.com', session, 10, 5000)
     expect(result).toEqual({ key: 'value' })
     expect(callCount).toBe(3) // 2 x 202, then 1 x 200
+  })
+})
+
+describe('pollForResponses', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('should return response value when messageId is found in responses object', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async () =>
+        new Response(
+          JSON.stringify({
+            responses: {
+              'msg-1': 'value-1',
+              'msg-2': 'value-2'
+            }
+          }),
+          { status: 200 }
+        )
+    )
+
+    const result = await pollForResponses('https://relay.example.com', 'session-1', 'msg-1', 10, 5000)
+    expect(result).toBe('value-1')
+  })
+
+  it('should poll multiple times until response is found', async () => {
+    let callCount = 0
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+      callCount++
+      if (callCount <= 2) {
+        return new Response(JSON.stringify({ responses: {} }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ responses: { 'msg-1': 'success' } }), { status: 200 })
+    })
+
+    const result = await pollForResponses('https://relay.example.com', 'session-1', 'msg-1', 10, 5000)
+    expect(result).toBe('success')
+    expect(callCount).toBe(3)
+  })
+
+  it('should throw timeout error if response is never found', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async () => new Response(JSON.stringify({ responses: {} }), { status: 200 })
+    )
+
+    await expect(pollForResponses('https://relay.example.com', 'session-1', 'msg-1', 10, 50)).rejects.toThrow(
+      'Timed out waiting for response'
+    )
   })
 })

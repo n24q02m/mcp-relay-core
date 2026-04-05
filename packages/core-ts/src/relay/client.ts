@@ -122,8 +122,8 @@ export async function pollForResponses(
     if (!response.ok) throw new Error(`Failed to poll responses: ${response.status}`)
 
     const body = await response.json()
-    const match = body.responses?.find((r: { messageId: string; value: string }) => r.messageId === messageId)
-    if (match) return match.value
+    const value = body.responses?.[messageId]
+    if (value !== undefined) return value
 
     await new Promise((resolve) => setTimeout(resolve, intervalMs))
   }

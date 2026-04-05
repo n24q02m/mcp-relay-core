@@ -17,6 +17,7 @@ from mcp_relay_core.relay.client import (
     RelaySession,
     create_session,
     generate_passphrase,
+    poll_for_responses,
     poll_for_result,
 )
 from mcp_relay_core.relay.wordlist import WORDLIST
@@ -340,3 +341,90 @@ class TestPollForResult:
             )
             assert result == {"key": "value"}
             assert call_count == 3
+
+
+class TestPollForResponses:
+    @pytest.mark.asyncio
+    async def test_returns_response_value_when_message_id_is_found(self):
+        response_200 = MagicMock()
+        response_200.status_code = 200
+        response_200.json.return_value = {
+            "responses": {
+                "msg-1": "value-1",
+                "msg-2": "value-2",
+            }
+        }
+
+        with patch("mcp_relay_core.relay.client.httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.get = AsyncMock(return_value=response_200)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            result = await poll_for_responses(
+                "https://relay.example.com",
+                "session-1",
+                "msg-1",
+                interval_s=0.01,
+                timeout_s=5.0,
+            )
+            assert result == "value-1"
+
+    @pytest.mark.asyncio
+    async def test_polls_multiple_times_until_response_is_found(self):
+        response_empty = MagicMock()
+        response_empty.status_code = 200
+        response_empty.json.return_value = {"responses": {}}
+
+        response_found = MagicMock()
+        response_found.status_code = 200
+        response_found.json.return_value = {"responses": {"msg-1": "success"}}
+
+        call_count = 0
+
+        async def mock_get(url):
+            nonlocal call_count
+            call_count += 1
+            if call_count <= 2:
+                return response_empty
+            return response_found
+
+        with patch("mcp_relay_core.relay.client.httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.get = AsyncMock(side_effect=mock_get)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            result = await poll_for_responses(
+                "https://relay.example.com",
+                "session-1",
+                "msg-1",
+                interval_s=0.01,
+                timeout_s=5.0,
+            )
+            assert result == "success"
+            assert call_count == 3
+
+    @pytest.mark.asyncio
+    async def test_throws_timeout_error_if_not_found(self):
+        response_empty = MagicMock()
+        response_empty.status_code = 200
+        response_empty.json.return_value = {"responses": {}}
+
+        with patch("mcp_relay_core.relay.client.httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.get = AsyncMock(return_value=response_empty)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            with pytest.raises(RuntimeError, match="Timed out waiting for response"):
+                await poll_for_responses(
+                    "https://relay.example.com",
+                    "session-1",
+                    "msg-1",
+                    interval_s=0.01,
+                    timeout_s=0.05,
+                )

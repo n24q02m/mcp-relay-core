@@ -26,7 +26,7 @@ export interface Session {
   createdAt: number
   sourceIp: string
   messages: RelayMessage[]
-  responses: RelayResponse[]
+  responses: Record<string, string>
 }
 
 const SESSION_TTL_MS = 10 * 60 * 1000 // 10 minutes
@@ -77,7 +77,7 @@ export function createSession(id: string, serverName: string, schema: unknown, s
     createdAt: Date.now(),
     sourceIp,
     messages: [],
-    responses: []
+    responses: {}
   }
   sessions.set(id, session)
   incrementIpCount(sourceIp)
@@ -129,14 +129,15 @@ export function getMessages(id: string, afterIndex?: number): RelayMessage[] {
 export function addResponse(id: string, response: RelayResponse): boolean {
   const session = getSession(id)
   if (!session) return false
-  if (session.responses.length >= MAX_RESPONSES_PER_SESSION) return false
-  session.responses.push(response)
+  const responseCount = Object.keys(session.responses).length
+  if (responseCount >= MAX_RESPONSES_PER_SESSION) return false
+  session.responses[response.messageId] = response.value
   return true
 }
 
-export function getResponses(id: string): RelayResponse[] {
+export function getResponses(id: string): Record<string, string> {
   const session = getSession(id)
-  if (!session) return []
+  if (!session) return {}
   return session.responses
 }
 
