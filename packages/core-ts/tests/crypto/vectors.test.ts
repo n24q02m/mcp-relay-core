@@ -11,6 +11,12 @@ interface CryptoVectors {
     info: string
     derived_key_hex: string
   }
+  pbkdf2: {
+    passphrase: string
+    salt: string
+    iterations: number
+    derived_key_hex: string
+  }
   aes_gcm: {
     plaintext: string
     iv_hex: string
@@ -31,6 +37,36 @@ describe('cross-language crypto test vectors', () => {
     const keyHex = Buffer.from(rawKey).toString('hex')
 
     expect(keyHex).toBe(vectors.hkdf.derived_key_hex)
+  })
+
+  it('PBKDF2 derives the expected key', async () => {
+    // derivePassphraseKey produces non-extractable keys.
+    // For parity testing, we re-implement the derivation with extractable=true.
+    const encoder = new TextEncoder()
+    const keyMaterial = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(vectors.pbkdf2.passphrase),
+      'PBKDF2',
+      false,
+      ['deriveKey']
+    )
+    const key = await crypto.subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        hash: 'SHA-256',
+        salt: encoder.encode(vectors.pbkdf2.salt),
+        iterations: vectors.pbkdf2.iterations
+      },
+      keyMaterial,
+      { name: 'AES-GCM', length: 256 },
+      true, // extractable
+      ['encrypt', 'decrypt']
+    )
+
+    const rawKey = new Uint8Array(await crypto.subtle.exportKey('raw', key))
+    const keyHex = Buffer.from(rawKey).toString('hex')
+
+    expect(keyHex).toBe(vectors.pbkdf2.derived_key_hex)
   })
 
   it('AES-GCM encrypts to expected ciphertext with fixed IV', async () => {

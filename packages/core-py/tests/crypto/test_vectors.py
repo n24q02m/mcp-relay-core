@@ -66,3 +66,17 @@ class TestAESGCMVectors:
 
         plaintext = decrypt(key, ciphertext, iv, tag)
         assert plaintext == aes["plaintext"]
+
+
+class TestPBKDF2Vectors:
+    def test_derives_expected_key(self):
+        from mcp_relay_core.storage.encryption import derive_passphrase_key
+
+        vectors = _load_vectors()
+        pbkdf2 = vectors["pbkdf2"]
+
+        derived = derive_passphrase_key(
+            pbkdf2["passphrase"], iterations=pbkdf2["iterations"]
+        )
+
+        assert derived.hex() == pbkdf2["derived_key_hex"]

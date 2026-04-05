@@ -44,6 +44,34 @@ describe('deriveFileKey', () => {
   })
 })
 
+describe('derivePassphraseKey', () => {
+  it('returns an AES-GCM CryptoKey', async () => {
+    const key = await derivePassphraseKey('my secret passphrase')
+    expect(key).toBeDefined()
+    expect(key.algorithm).toMatchObject({ name: 'AES-GCM', length: 256 })
+    expect(key.usages).toContain('encrypt')
+    expect(key.usages).toContain('decrypt')
+  })
+
+  it('same passphrase produces same key (deterministic)', async () => {
+    const passphrase = 'password123'
+    const key1 = await derivePassphraseKey(passphrase)
+    const key2 = await derivePassphraseKey(passphrase)
+
+    const encrypted = await encryptData(key1, 'test data')
+    const decrypted = await decryptData(key2, encrypted)
+    expect(decrypted).toBe('test data')
+  })
+
+  it('different passphrase produces different key', async () => {
+    const key1 = await derivePassphraseKey('passphrase-A')
+    const key2 = await derivePassphraseKey('passphrase-B')
+
+    const encrypted = await encryptData(key1, 'top secret')
+    await expect(decryptData(key2, encrypted)).rejects.toThrow()
+  })
+})
+
 describe('encrypt + decrypt roundtrip', () => {
   it('encrypts and decrypts plain text', async () => {
     const key = await deriveFileKey('test-machine', 'test-user')
