@@ -1,11 +1,15 @@
 """Tests for encrypted config file management."""
 
+import json
 from unittest.mock import MagicMock, patch
 
 import pytest
 from cryptography.exceptions import InvalidTag
 
 from mcp_relay_core.storage.config_file import (
+    _DEFAULT_CONFIG_PATH,
+    _get_config_path,
+    _load_store,
     _with_retry,
     delete_config,
     export_config,
@@ -188,8 +192,6 @@ class TestExportImportConfig:
 
 class TestPBKDF2Migration:
     def test_auto_migrates_legacy_config(self, _temp_config):
-        import json
-
         from mcp_relay_core.storage.encryption import (
             LEGACY_PBKDF2_ITERATIONS,
             PBKDF2_ITERATIONS,
@@ -221,3 +223,23 @@ class TestPBKDF2Migration:
         # Legacy key should no longer decrypt
         with pytest.raises(InvalidTag):
             decrypt_data(legacy_key, new_data)
+
+
+class TestGetConfigPath:
+    def test_returns_default_path_when_no_override(self):
+        # We need to ensure _config_path_override is None
+        set_config_path(None)
+        assert _get_config_path() == _DEFAULT_CONFIG_PATH
+
+
+class TestLoadStoreErrors:
+    def test_raises_original_error_when_both_decryptions_fail(self, _temp_config):
+        config_path = _temp_config / "config.enc"
+        config_path.write_bytes(b"0" * 30)
+
+        # Mock derive_file_key to return something consistent
+        with patch("mcp_relay_core.storage.config_file.derive_file_key") as mock_derive:
+            mock_derive.return_value = b"0" * 32
+            # decrypt_data likely raises InvalidTag when given "invalid-encrypted-data"
+            with pytest.raises(InvalidTag):
+                _load_store()
