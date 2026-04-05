@@ -5,7 +5,9 @@ import {
   derivePassphraseKey,
   encryptData,
   LEGACY_PBKDF2_ITERATIONS,
-  PBKDF2_ITERATIONS
+  PBKDF2_ITERATIONS,
+  // @ts-ignore
+  V1_LEGACY_PBKDF2_ITERATIONS
 } from '../../src/storage/encryption.js'
 
 describe('deriveFileKey', () => {
@@ -104,11 +106,32 @@ describe('PBKDF2 iterations', () => {
     expect(decrypted).toBe('migration test')
   })
 
+  it('v1 legacy key can decrypt v1-encrypted data', async () => {
+    const keyV1 = await deriveFileKey('m', 'u', V1_LEGACY_PBKDF2_ITERATIONS)
+    const encrypted = await encryptData(keyV1, 'migration v1 test')
+    const decrypted = await decryptData(keyV1, encrypted)
+    expect(decrypted).toBe('migration v1 test')
+  })
+
   it('passphrase key with different iterations produces different keys', async () => {
     const keyCurrent = await derivePassphraseKey('pass', PBKDF2_ITERATIONS)
     const keyLegacy = await derivePassphraseKey('pass', LEGACY_PBKDF2_ITERATIONS)
 
     const encrypted = await encryptData(keyCurrent, 'secret')
     await expect(decryptData(keyLegacy, encrypted)).rejects.toThrow()
+  })
+})
+
+describe('PBKDF2 iteration values', () => {
+  it('uses 1,000,000 iterations by default', () => {
+    expect(PBKDF2_ITERATIONS).toBe(1_000_000)
+  })
+
+  it('uses 600,000 iterations for legacy', () => {
+    expect(LEGACY_PBKDF2_ITERATIONS).toBe(600_000)
+  })
+
+  it('uses 100,000 iterations for v1 legacy', () => {
+    expect(V1_LEGACY_PBKDF2_ITERATIONS).toBe(100_000)
   })
 })

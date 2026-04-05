@@ -13,6 +13,7 @@ from platformdirs import user_config_dir
 from mcp_relay_core.storage.encryption import (
     LEGACY_PBKDF2_ITERATIONS,
     PBKDF2_ITERATIONS,
+    V1_LEGACY_PBKDF2_ITERATIONS,
     decrypt_data,
     derive_file_key,
     derive_passphrase_key,
@@ -82,7 +83,17 @@ def _load_store() -> dict[str, Any]:
             _save_store(store)
             return store
         except Exception:
-            raise err from None
+            try:
+                v1_key = derive_file_key(
+                    machine_id, username, V1_LEGACY_PBKDF2_ITERATIONS
+                )
+                json_str = decrypt_data(v1_key, data)
+                store = json.loads(json_str)
+                # Auto-migrate to current iterations
+                _save_store(store)
+                return store
+            except Exception:
+                raise err from None
 
 
 def _save_store(store: dict[str, Any]) -> None:
@@ -183,7 +194,13 @@ def import_config(passphrase: str, data: bytes) -> None:
             legacy_key = derive_passphrase_key(passphrase, LEGACY_PBKDF2_ITERATIONS)
             json_str = decrypt_data(legacy_key, data)
         except Exception:
-            raise err from None
+            try:
+                v1_key = derive_passphrase_key(
+                    passphrase, V1_LEGACY_PBKDF2_ITERATIONS
+                )
+                json_str = decrypt_data(v1_key, data)
+            except Exception:
+                raise err from None
     imported = json.loads(json_str)
 
     store = _load_store()

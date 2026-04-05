@@ -6,6 +6,7 @@ from cryptography.exceptions import InvalidTag
 from mcp_relay_core.storage.encryption import (
     LEGACY_PBKDF2_ITERATIONS,
     PBKDF2_ITERATIONS,
+    V1_LEGACY_PBKDF2_ITERATIONS,
     decrypt_data,
     derive_file_key,
     derive_passphrase_key,
@@ -121,6 +122,13 @@ class TestPBKDF2Iterations:
         decrypted = decrypt_data(key_legacy, encrypted)
         assert decrypted == plaintext
 
+    def test_v1_legacy_key_can_decrypt_v1_data(self):
+        key_v1 = derive_file_key("m", "u", V1_LEGACY_PBKDF2_ITERATIONS)
+        plaintext = "migration v1 test"
+        encrypted = encrypt_data(key_v1, plaintext)
+        decrypted = decrypt_data(key_v1, encrypted)
+        assert decrypted == plaintext
+
     def test_passphrase_key_different_iterations(self):
         key_current = derive_passphrase_key("pass", PBKDF2_ITERATIONS)
         key_legacy = derive_passphrase_key("pass", LEGACY_PBKDF2_ITERATIONS)
@@ -128,3 +136,10 @@ class TestPBKDF2Iterations:
         encrypted = encrypt_data(key_current, "secret")
         with pytest.raises(InvalidTag):
             decrypt_data(key_legacy, encrypted)
+
+
+class TestPBKDF2IterationValues:
+    def test_iteration_values(self):
+        assert PBKDF2_ITERATIONS == 1_000_000
+        assert LEGACY_PBKDF2_ITERATIONS == 600_000
+        assert V1_LEGACY_PBKDF2_ITERATIONS == 100_000
