@@ -1,0 +1,3 @@
+## 2024-03-24 - Required Field Indicators and Helper Text Association
+**Learning:** Adding a visual required indicator (`*`) is a great UX improvement, but it needs `aria-hidden="true"` so screen readers don't announce "star" redundantly, since the input already has a `required` attribute. Furthermore, dynamically appended helper text or helper links need to be associated with their inputs using `aria-describedby` so screen reader users are aware of the additional context when the input receives focus.
+**Action:** When dynamically generating forms with optional/required fields and helper text, ensure `aria-hidden` is used for visual required indicators and `aria-describedby` links inputs to their supplementary descriptions.

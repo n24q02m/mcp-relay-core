@@ -72,7 +72,7 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
         showStatus(
           document.getElementById('status-container'),
           'Credentials sent. Waiting for server to complete setup...',
-          'info'
+          'success'
         )
         startMessagePolling(sessionId, document.getElementById('status-container'))
       } else {
@@ -95,7 +95,7 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
     try {
       const response = await fetch(`/api/sessions/${sessionId}/skip`, { method: 'POST' })
       if (response.ok) {
-        showStatus(document.getElementById('status-container'), 'Setup skipped. Using local ONNX models.', 'info')
+        showStatus(document.getElementById('status-container'), 'Setup skipped. Using local ONNX models.', 'success')
         document.getElementById('setup-form').style.display = 'none'
       }
     } catch (err) {

@@ -220,7 +220,7 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
         showStatus(
           document.getElementById('status-container'),
           'Credentials sent. Waiting for server...',
-          'info'
+          'success'
         )
         startMessagePolling(sessionId, document.getElementById('status-container'))
       } else {
@@ -245,7 +245,7 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
     try {
       const response = await fetch(`/api/sessions/${sessionId}/skip`, { method: 'POST' })
       if (response.ok) {
-        showStatus(document.getElementById('status-container'), 'Setup skipped. Server will use default settings.', 'info')
+        showStatus(document.getElementById('status-container'), 'Setup skipped. Server will use default settings.', 'success')
         document.getElementById('setup-form').style.display = 'none'
       }
     } catch (err) {
