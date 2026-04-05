@@ -12,6 +12,9 @@ export async function exportPublicKey(key) {
   return toBase64url(new Uint8Array(raw))
 }
 
+const BASE64URL_ENCODE_MAP = { '+': '-', '/': '_', '=': '' }
+const BASE64URL_DECODE_MAP = { '-': '+', _: '/' }
+
 export async function importPublicKey(base64url) {
   // Try primary decoder first, fallback to atob if it fails
   let raw = fromBase64url(base64url)
@@ -20,13 +23,15 @@ export async function importPublicKey(base64url) {
   if (raw.length !== 65 || raw[0] !== 0x04) {
     // Try atob fallback (handles browser-specific base64 quirks)
     try {
-      const b64 = base64url.replace(/-/g, '+').replace(/_/g, '/')
+      const b64 = base64url.replace(/[-_]/g, (m) => BASE64URL_DECODE_MAP[m])
       const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4)
       const binary = atob(padded)
       const fallback = new Uint8Array(binary.length)
       for (let i = 0; i < binary.length; i++) fallback[i] = binary.charCodeAt(i)
       if (fallback.length === 65 && fallback[0] === 0x04) raw = fallback
-    } catch { /* use original */ }
+    } catch {
+      /* use original */
+    }
   }
 
   if (raw.length !== 65 || raw[0] !== 0x04) {
@@ -81,7 +86,7 @@ export function toBase64(uint8) {
 }
 
 function toBase64url(uint8) {
-  return toBase64(uint8).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+  return toBase64(uint8).replace(/[+/=]/g, (m) => BASE64URL_ENCODE_MAP[m])
 }
 
 const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
@@ -91,7 +96,7 @@ for (let i = 0; i < BASE64_CHARS.length; i++) {
 }
 
 function fromBase64url(base64url) {
-  const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/')
+  const base64 = base64url.replace(/[-_]/g, (m) => BASE64URL_DECODE_MAP[m])
   const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4)
   // Pure JS decoder — avoids browser atob quirks (Brave, etc.)
   const len = padded.length
