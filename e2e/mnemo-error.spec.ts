@@ -22,7 +22,7 @@ test.describe('Mnemo Error Handling', () => {
     const keyPair = await generateKeyPair()
     const pubKey = await exportPublicKey(keyPair.publicKey)
     const passphrase = generatePassphrase()
-    const sessionId = `test-mnemo-session-${Math.random().toString(36).substring(7)}`
+    const sessionId = `test-mnemo-session-${crypto.randomUUID()}`
 
     // 1. Create Mnemo session on relay with a dummy schema
     const createRes = await fetch(`${relay.url}/api/sessions`, {
