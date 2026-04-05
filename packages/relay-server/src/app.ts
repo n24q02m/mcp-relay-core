@@ -8,7 +8,27 @@ export function createApp(): express.Express {
   const app = express()
 
   // Trust proxy headers from Caddy/CF Tunnel for correct client IP in rate limiting
-  app.set('trust proxy', 1)
+  const rawTrustProxy = process.env.TRUST_PROXY
+  if (rawTrustProxy === 'true') {
+    app.set('trust proxy', true)
+  } else if (rawTrustProxy === 'false') {
+    app.set('trust proxy', false)
+  } else if (rawTrustProxy) {
+    const num = Number(rawTrustProxy)
+    if (!Number.isNaN(num)) {
+      app.set('trust proxy', num)
+    } else if (rawTrustProxy.includes(',')) {
+      app.set(
+        'trust proxy',
+        rawTrustProxy.split(',').map((s) => s.trim())
+      )
+    } else {
+      app.set('trust proxy', rawTrustProxy)
+    }
+  } else {
+    // Default to 1 for backward compatibility (Caddy/CF Tunnel)
+    app.set('trust proxy', 1)
+  }
 
   const rawOrigin = process.env.CORS_ORIGIN
   let corsOrigin: boolean | string | string[] = false // Restrictive default: block cross-origin

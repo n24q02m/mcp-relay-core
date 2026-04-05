@@ -49,6 +49,7 @@ docker run -p 3000:8080 mcp-relay-server
 | `PORT` | `3000` | Server listen port |
 | `PAGES_DIR` | - | Directory for static relay form pages |
 | `CORS_ORIGIN` | `*` | CORS allowed origin |
+| `TRUST_PROXY` | `1` | Configures Express "trust proxy" setting for correct IP resolution behind proxies. Can be boolean ("true"/"false"), number (hops), or string (IP/CIDR). |
 
 ## Security properties
 
