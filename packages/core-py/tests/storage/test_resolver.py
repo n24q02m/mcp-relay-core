@@ -1,6 +1,7 @@
 """Tests for config resolution."""
 
 import os
+from unittest.mock import patch
 
 import pytest
 
@@ -14,72 +15,69 @@ def _temp_config(tmp_path):
     set_config_path(config_path)
     yield
     set_config_path(None)
-    # Clean env vars
-    for key in list(os.environ.keys()):
-        if key.startswith("MCP_"):
-            del os.environ[key]
 
 
 class TestResolveConfig:
-    def test_env_vars_take_highest_priority(self):
-        os.environ["MCP_TELEGRAM_BOT_TOKEN"] = "env-token"
-        os.environ["MCP_TELEGRAM_CHAT_ID"] = "env-chat"
+    async def test_resolves_from_env_vars_first(self):
+        with patch.dict(
+            os.environ,
+            {"MCP_MY_SERVER_API_KEY": "env-key", "MCP_MY_SERVER_ENDPOINT": "env-end"},
+        ):
+            # Even if config file has it, env takes priority
+            await write_config(
+                "my-server", {"api_key": "file-key", "endpoint": "file-end"}
+            )
 
-        # Also write to config file (should be ignored)
-        write_config("telegram", {"bot_token": "file-token", "chat_id": "file-chat"})
+            result = await resolve_config("my-server", ["api_key", "endpoint"])
+            assert result.source == "env"
+            assert result.config == {"api_key": "env-key", "endpoint": "env-end"}
 
-        result = resolve_config("telegram", ["bot_token", "chat_id"])
-        assert result.source == "env"
-        assert result.config == {"bot_token": "env-token", "chat_id": "env-chat"}
+    async def test_resolves_from_file_if_env_missing(self):
+        with patch.dict(os.environ, {}, clear=True):
+            await write_config(
+                "my-server", {"api_key": "file-key", "endpoint": "file-end"}
+            )
 
-    def test_falls_back_to_config_file_when_env_incomplete(self):
-        os.environ["MCP_TELEGRAM_BOT_TOKEN"] = "env-token"
-        # chat_id NOT set in env
+            result = await resolve_config("my-server", ["api_key", "endpoint"])
+            assert result.source == "file"
+            assert result.config == {"api_key": "file-key", "endpoint": "file-end"}
 
-        write_config("telegram", {"bot_token": "file-token", "chat_id": "file-chat"})
+    async def test_resolves_from_defaults_if_env_and_file_missing(self):
+        with patch.dict(os.environ, {}, clear=True):
+            result = await resolve_config(
+                "my-server",
+                ["api_key", "endpoint"],
+                defaults={"api_key": "def-key", "endpoint": "def-end"},
+            )
+            assert result.source == "defaults"
+            assert result.config == {"api_key": "def-key", "endpoint": "def-end"}
 
-        result = resolve_config("telegram", ["bot_token", "chat_id"])
-        assert result.source == "file"
-        assert result.config == {"bot_token": "file-token", "chat_id": "file-chat"}
+    async def test_returns_none_if_all_sources_missing(self):
+        with patch.dict(os.environ, {}, clear=True):
+            result = await resolve_config("my-server", ["api_key", "endpoint"])
+            assert result.source is None
+            assert result.config is None
 
-    def test_falls_back_to_defaults_when_file_incomplete(self):
-        write_config("telegram", {"bot_token": "file-token"})
-        # file missing chat_id
+    async def test_returns_none_if_source_has_incomplete_fields(self):
+        # File has api_key but missing endpoint
+        await write_config("my-server", {"api_key": "file-key"})
 
-        defaults = {"bot_token": "def-token", "chat_id": "def-chat"}
-        result = resolve_config("telegram", ["bot_token", "chat_id"], defaults)
-        assert result.source == "defaults"
-        assert result.config == defaults
-
-    def test_returns_none_when_nothing_found(self):
-        result = resolve_config("telegram", ["bot_token", "chat_id"])
-        assert result.source is None
+        result = await resolve_config("my-server", ["api_key", "endpoint"])
         assert result.config is None
 
-    def test_returns_none_when_defaults_incomplete(self):
-        result = resolve_config(
-            "telegram", ["bot_token", "chat_id"], {"bot_token": "partial"}
+    async def test_handles_hyphens_in_names_for_env_vars(self):
+        with patch.dict(os.environ, {"MCP_MY_SERVER_API_KEY": "val"}):
+            # my-server -> MY_SERVER, api-key -> API_KEY
+            result = await resolve_config("my-server", ["api-key"])
+            assert result.config == {"api-key": "val"}
+
+    async def test_empty_env_var_is_treated_as_missing(self):
+        with patch.dict(os.environ, {"MCP_MY_SERVER_API_KEY": ""}):
+            result = await resolve_config("my-server", ["api_key"])
+            assert result.config is None
+
+    async def test_empty_defaults_is_treated_as_missing(self):
+        result = await resolve_config(
+            "my-server", ["api_key"], defaults={"api_key": ""}
         )
-        assert result.source is None
-        assert result.config is None
-
-    def test_handles_hyphenated_server_names(self):
-        os.environ["MCP_MY_SERVER_API_KEY"] = "key123"
-
-        result = resolve_config("my-server", ["api_key"])
-        assert result.source == "env"
-        assert result.config == {"api_key": "key123"}
-
-    def test_empty_env_var_is_treated_as_missing(self):
-        os.environ["MCP_TELEGRAM_BOT_TOKEN"] = ""
-
-        result = resolve_config("telegram", ["bot_token"])
-        assert result.source is None
-        assert result.config is None
-
-    def test_file_config_with_empty_value_is_treated_as_missing(self):
-        write_config("telegram", {"bot_token": ""})
-
-        result = resolve_config("telegram", ["bot_token"])
-        assert result.source is None
         assert result.config is None
