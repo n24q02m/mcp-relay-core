@@ -53,7 +53,7 @@ asyncio.run(setup())
 ### Crypto primitives
 
 ```python
-from mcp_relay_core import (
+from mcp_relay_core.crypto import (
     generate_key_pair,
     export_public_key,
     derive_shared_secret,
