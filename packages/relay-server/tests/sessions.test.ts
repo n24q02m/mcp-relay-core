@@ -54,7 +54,7 @@ describe('POST /api/sessions', () => {
     const res = await fetch(`${baseUrl}/api/sessions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId: 's-6', serverName: 'telegram', schema: {} })
+      body: JSON.stringify({ sessionId: 'extra', serverName: 'telegram', schema: {} })
     })
     expect(res.status).toBe(429)
   })

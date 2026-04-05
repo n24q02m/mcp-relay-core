@@ -63,9 +63,15 @@ export function getSession(id: string): Session | undefined {
 }
 
 export function createSession(id: string, serverName: string, schema: unknown, sourceIp: string): Session | null {
+  const existingSession = sessions.get(id)
   const ipCount = countSessionsByIp(sourceIp)
-  if (ipCount >= MAX_SESSIONS_PER_IP) {
+
+  if (ipCount >= MAX_SESSIONS_PER_IP && (!existingSession || existingSession.sourceIp !== sourceIp)) {
     return null
+  }
+
+  if (existingSession) {
+    decrementIpCount(existingSession.sourceIp)
   }
 
   const session: Session = {
