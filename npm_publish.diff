@@ -1,0 +1,49 @@
+<<<<<<< SEARCH
+      - name: Build and publish core-ts
+        run: |
+          cd packages/core-ts && bun run build
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view @n24q02m/mcp-relay-core@"$VERSION" version 2>/dev/null; then
+            echo "core-ts@$VERSION already published, skipping"
+          else
+            TAG=${{ needs.release.outputs.is_prerelease == 'true' && 'beta' || 'latest' }}
+            npm publish --provenance --access public --no-git-checks --tag "$TAG"
+          fi
+
+      - name: Build and publish relay-server
+        run: |
+          cd packages/relay-server && bun run build
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view @n24q02m/mcp-relay-server@"$VERSION" version 2>/dev/null; then
+            echo "relay-server@$VERSION already published, skipping"
+          else
+            TAG=${{ needs.release.outputs.is_prerelease == 'true' && 'beta' || 'latest' }}
+            npm publish --provenance --access public --no-git-checks --tag "$TAG"
+          fi
+=======
+      - name: Build and publish core-ts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          cd packages/core-ts && bun run build
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view @n24q02m/mcp-relay-core@"$VERSION" version 2>/dev/null; then
+            echo "core-ts@$VERSION already published, skipping"
+          else
+            TAG=${{ needs.release.outputs.is_prerelease == 'true' && 'beta' || 'latest' }}
+            npm publish --provenance --access public --no-git-checks --tag "$TAG"
+          fi
+
+      - name: Build and publish relay-server
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          cd packages/relay-server && bun run build
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view @n24q02m/mcp-relay-server@"$VERSION" version 2>/dev/null; then
+            echo "relay-server@$VERSION already published, skipping"
+          else
+            TAG=${{ needs.release.outputs.is_prerelease == 'true' && 'beta' || 'latest' }}
+            npm publish --provenance --access public --no-git-checks --tag "$TAG"
+          fi
+>>>>>>> REPLACE
