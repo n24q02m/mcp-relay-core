@@ -1,7 +1,7 @@
 [semantic_release]
 version_toml = ["packages/core-py/pyproject.toml:project.version"]
 build_command = """
-python3 -c "import json, os; v = os.getenv('NEW_VERSION'); [open(f, 'w').write(json.dumps(dict(json.load(open(f)), version=v), indent=2) + '\n') for f in ['packages/core-ts/package.json', 'packages/relay-server/package.json']]"
+python3 -c "import json, os; v = os.getenv('NEW_VERSION'); files = ['packages/core-ts/package.json', 'packages/relay-server/package.json']; [open(f, 'w').write(json.dumps(dict(json.load(open(f)), version=v), indent=2) + '\n') for f in files]"
 """
 assets = [
     "packages/core-ts/package.json",
