@@ -6,7 +6,6 @@ import {
   encryptData,
   LEGACY_PBKDF2_ITERATIONS,
   PBKDF2_ITERATIONS,
-  // @ts-ignore
   V1_LEGACY_PBKDF2_ITERATIONS
 } from '../../src/storage/encryption.js'
 

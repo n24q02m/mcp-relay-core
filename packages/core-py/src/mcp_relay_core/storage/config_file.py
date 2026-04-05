@@ -195,9 +195,7 @@ def import_config(passphrase: str, data: bytes) -> None:
             json_str = decrypt_data(legacy_key, data)
         except Exception:
             try:
-                v1_key = derive_passphrase_key(
-                    passphrase, V1_LEGACY_PBKDF2_ITERATIONS
-                )
+                v1_key = derive_passphrase_key(passphrase, V1_LEGACY_PBKDF2_ITERATIONS)
                 json_str = decrypt_data(v1_key, data)
             except Exception:
                 raise err from None
