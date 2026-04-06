@@ -1,6 +1,6 @@
 {
   "name": "@n24q02m/mcp-relay-core",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Zero-config credential relay client for TypeScript MCP servers — ECDH P-256 + AES-256-GCM E2E encryption",
   "keywords": [
     "mcp",
