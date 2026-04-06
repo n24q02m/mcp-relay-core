@@ -51,6 +51,11 @@ async function openInWsl(url: string): Promise<boolean> {
  */
 export async function tryOpenBrowser(url: string): Promise<boolean> {
   try {
+    // Validate URL to prevent shell injection
+    if (!/^https?:\/\//i.test(url)) {
+      return false
+    }
+
     const platform = process.platform
     const quotedUrl = JSON.stringify(url)
 
