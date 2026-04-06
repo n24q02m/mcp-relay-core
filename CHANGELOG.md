@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.4.0 (2026-04-06)
+
+### Bug Fixes
+
+- Harden browser URL validation and add comprehensive TS tests
+  ([`150cf08`](https://github.com/n24q02m/mcp-relay-core/commit/150cf0803f0e6897307f333ba3f8453f976186ac))
+
+### Features
+
+- Add SessionLock, try_open_browser, and local_mode_marker primitives
+  ([`3be4123`](https://github.com/n24q02m/mcp-relay-core/commit/3be41237b3b2f43bc2f2151a952b37e2f24c7625))
+
+
 ## v1.3.1 (2026-04-04)
 
 ### Bug Fixes
