@@ -32,19 +32,26 @@ sessionsRouter.post('/', (req: Request, res: Response) => {
     return
   }
 
-  if (sessionId.length > 256) {
-    res.status(400).json({ error: 'sessionId too long (max 256 chars)' })
+  if (typeof sessionId !== 'string' || sessionId.length > 256) {
+    res.status(400).json({ error: 'sessionId must be a string and not exceed 256 chars' })
     return
   }
 
-  if (serverName.length > 256) {
-    res.status(400).json({ error: 'serverName too long (max 256 chars)' })
+  if (typeof serverName !== 'string' || serverName.length > 256) {
+    res.status(400).json({ error: 'serverName must be a string and not exceed 256 chars' })
     return
   }
 
-  if (schema !== undefined && JSON.stringify(schema).length > 65536) {
-    res.status(400).json({ error: 'schema too large (max 64KB)' })
-    return
+  if (schema !== undefined) {
+    try {
+      if (JSON.stringify(schema).length > 65536) {
+        res.status(400).json({ error: 'schema too large (max 64KB)' })
+        return
+      }
+    } catch {
+      res.status(400).json({ error: 'schema must be serializable' })
+      return
+    }
   }
 
   const sourceIp = req.ip ?? req.socket.remoteAddress ?? 'unknown'
@@ -94,8 +101,17 @@ sessionsRouter.post('/:id/result', (req: Request, res: Response) => {
     return
   }
 
-  if (browserPub.length > 4096 || ciphertext.length > 4096 || iv.length > 4096 || tag.length > 4096) {
-    res.status(400).json({ error: 'result field(s) too large (max 4KB each)' })
+  if (
+    typeof browserPub !== 'string' ||
+    typeof ciphertext !== 'string' ||
+    typeof iv !== 'string' ||
+    typeof tag !== 'string' ||
+    browserPub.length > 4096 ||
+    ciphertext.length > 4096 ||
+    iv.length > 4096 ||
+    tag.length > 4096
+  ) {
+    res.status(400).json({ error: 'result field(s) must be strings and not exceed 4KB each' })
     return
   }
 
@@ -143,14 +159,21 @@ sessionsRouter.post('/:id/messages', (req: Request, res: Response) => {
     return
   }
 
-  if (text.length > 10240) {
-    res.status(400).json({ error: 'text too long (max 10KB)' })
+  if (typeof type !== 'string' || typeof text !== 'string' || text.length > 10240) {
+    res.status(400).json({ error: 'type and text must be strings, and text not exceed 10KB' })
     return
   }
 
-  if (data !== undefined && JSON.stringify(data).length > 65536) {
-    res.status(400).json({ error: 'data too large (max 64KB)' })
-    return
+  if (data !== undefined) {
+    try {
+      if (JSON.stringify(data).length > 65536) {
+        res.status(400).json({ error: 'data too large (max 64KB)' })
+        return
+      }
+    } catch {
+      res.status(400).json({ error: 'data must be serializable' })
+      return
+    }
   }
 
   const session = getSession(paramId(req))
@@ -196,8 +219,8 @@ sessionsRouter.post('/:id/responses', (req: Request, res: Response) => {
     return
   }
 
-  if (value.length > 65536) {
-    res.status(400).json({ error: 'value too large (max 64KB)' })
+  if (typeof messageId !== 'string' || typeof value !== 'string' || value.length > 65536) {
+    res.status(400).json({ error: 'messageId and value must be strings, and value not exceed 64KB' })
     return
   }
 

@@ -78,7 +78,7 @@ describe('Input size validation', () => {
     })
     expect(res.status).toBe(400)
     const body = await res.json()
-    expect(body.error).toContain('sessionId too long')
+    expect(body.error).toContain('sessionId must be a string and not exceed 256 chars')
   })
 
   it('rejects oversized serverName (400)', async () => {
@@ -89,7 +89,7 @@ describe('Input size validation', () => {
     })
     expect(res.status).toBe(400)
     const body = await res.json()
-    expect(body.error).toContain('serverName too long')
+    expect(body.error).toContain('serverName must be a string and not exceed 256 chars')
   })
 
   it('rejects oversized result fields (400)', async () => {
@@ -106,7 +106,7 @@ describe('Input size validation', () => {
     })
     expect(res.status).toBe(400)
     const body = await res.json()
-    expect(body.error).toContain('too large')
+    expect(body.error).toContain('result field(s) must be strings and not exceed 4KB each')
   })
 
   it('rejects oversized message text (400)', async () => {
@@ -123,7 +123,7 @@ describe('Input size validation', () => {
     })
     expect(res.status).toBe(400)
     const body = await res.json()
-    expect(body.error).toContain('text too long')
+    expect(body.error).toContain('type and text must be strings, and text not exceed 10KB')
   })
 
   it('rejects oversized response value (400)', async () => {
@@ -140,7 +140,7 @@ describe('Input size validation', () => {
     })
     expect(res.status).toBe(400)
     const body = await res.json()
-    expect(body.error).toContain('value too large')
+    expect(body.error).toContain('messageId and value must be strings, and value not exceed 64KB')
   })
 })
 
