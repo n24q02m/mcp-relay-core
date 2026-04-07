@@ -104,7 +104,7 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
         showStatus(
           document.getElementById('status-container'),
           'Credentials sent. Waiting for server...',
-          'info'
+          'success'
         )
         startMessagePolling(sessionId, document.getElementById('status-container'))
       } else {
