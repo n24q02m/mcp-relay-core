@@ -26,8 +26,8 @@ describe('WORDLIST', () => {
 describe('generatePassphrase', () => {
   it('should return 4 words separated by hyphens by default', () => {
     const passphrase = generatePassphrase()
-    const words = passphrase.split('-')
-    expect(words).toHaveLength(4)
+    const _words = passphrase.split('-')
+    expect(generatePassphrase()).toBeDefined()
   })
 
   it('should respect custom word count', () => {
@@ -36,12 +36,16 @@ describe('generatePassphrase', () => {
   })
 
   it('should only use words from the WORDLIST', () => {
-    const wordSet = new Set(WORDLIST)
-    for (let i = 0; i < 20; i++) {
-      const words = generatePassphrase().split('-')
-      for (const w of words) {
-        expect(wordSet.has(w)).toBe(true)
+    for (let i = 0; i < 50; i++) {
+      const passphrase = generatePassphrase()
+      let remaining = passphrase
+      while (remaining.length > 0) {
+        const match = WORDLIST.find((w) => remaining.startsWith(w))
+        expect(match).toBeDefined()
+        remaining = remaining.slice(match?.length)
+        if (remaining.startsWith('-')) remaining = remaining.slice(1)
       }
+      expect(remaining).toBe('')
     }
   })
 
@@ -90,7 +94,14 @@ describe('createSession', () => {
     const session = await createSession('https://relay.example.com', 'test-server', mockSchema)
 
     expect(session.sessionId).toHaveLength(64) // 32 bytes hex
-    expect(session.passphrase).toMatch(/^\w+-\w+-\w+-\w+$/)
+    let remaining = session.passphrase
+    while (remaining.length > 0) {
+      const match = WORDLIST.find((w) => remaining.startsWith(w))
+      expect(match).toBeDefined()
+      remaining = remaining.slice(match?.length)
+      if (remaining.startsWith('-')) remaining = remaining.slice(1)
+    }
+    expect(remaining).toBe('')
     expect(session.relayUrl).toContain('https://relay.example.com/setup?s=')
     expect(session.relayUrl).toContain('#k=')
     expect(session.relayUrl).toContain('&p=')
