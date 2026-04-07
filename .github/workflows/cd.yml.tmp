@@ -1,0 +1,27 @@
+<<<<<<< SEARCH
+      - name: Build and publish
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          cd packages/core-py
+          VERSION=$(grep "^version = " pyproject.toml | cut -d """ -f 2)
+          if curl -s https://pypi.org/pypi/mcp-relay-core/json | jq -e ".releases | has(\"$VERSION\")" > /dev/null; then
+            echo "mcp-relay-core@$VERSION already published, skipping"
+          else
+            uv build
+            uv publish
+          fi
+=======
+      - name: Build and publish
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          cd packages/core-py
+          VERSION=$(grep "^version = " pyproject.toml | cut -d '"' -f 2)
+          if curl -s https://pypi.org/pypi/mcp-relay-core/json | jq -e ".releases | has(\"$VERSION\")" > /dev/null; then
+            echo "mcp-relay-core@$VERSION already published, skipping"
+          else
+            uv build
+            uv publish
+          fi
+>>>>>>> REPLACE
