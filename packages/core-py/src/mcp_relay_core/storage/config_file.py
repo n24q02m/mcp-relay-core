@@ -13,6 +13,7 @@ from platformdirs import user_config_dir
 from mcp_relay_core.storage.encryption import (
     LEGACY_PBKDF2_ITERATIONS,
     PBKDF2_ITERATIONS,
+    V1_LEGACY_PBKDF2_ITERATIONS,
     decrypt_data,
     derive_file_key,
     derive_passphrase_key,
@@ -69,20 +70,27 @@ def _load_store() -> dict[str, Any]:
     username = get_username()
     data = config_path.read_bytes()
 
-    try:
-        key = derive_file_key(machine_id, username, PBKDF2_ITERATIONS)
-        json_str = decrypt_data(key, data)
-        return json.loads(json_str)
-    except Exception as err:
+    # Try 1M (current), then 600k (legacy), then 100k (v1 legacy)
+    for iterations in [
+        PBKDF2_ITERATIONS,
+        LEGACY_PBKDF2_ITERATIONS,
+        V1_LEGACY_PBKDF2_ITERATIONS,
+    ]:
         try:
-            legacy_key = derive_file_key(machine_id, username, LEGACY_PBKDF2_ITERATIONS)
-            json_str = decrypt_data(legacy_key, data)
+            key = derive_file_key(machine_id, username, iterations)
+            json_str = decrypt_data(key, data)
             store = json.loads(json_str)
-            # Auto-migrate to current iterations
-            _save_store(store)
+            # If we used legacy iterations, auto-migrate to current
+            if iterations != PBKDF2_ITERATIONS:
+                _save_store(store)
             return store
         except Exception:
-            raise err from None
+            continue
+
+    # If all failed, re-raise error with current iterations
+    key = derive_file_key(machine_id, username, PBKDF2_ITERATIONS)
+    decrypt_data(key, data)
+    return {"version": 1, "servers": {}}  # Unreachable
 
 
 def _save_store(store: dict[str, Any]) -> None:
@@ -175,17 +183,26 @@ def import_config(passphrase: str, data: bytes) -> None:
     Raises:
         cryptography.exceptions.InvalidTag: If passphrase is wrong.
     """
-    try:
-        key = derive_passphrase_key(passphrase, PBKDF2_ITERATIONS)
-        json_str = decrypt_data(key, data)
-    except Exception as err:
-        try:
-            legacy_key = derive_passphrase_key(passphrase, LEGACY_PBKDF2_ITERATIONS)
-            json_str = decrypt_data(legacy_key, data)
-        except Exception:
-            raise err from None
-    imported = json.loads(json_str)
+    json_str = None
+    last_err = None
 
+    for iterations in [
+        PBKDF2_ITERATIONS,
+        LEGACY_PBKDF2_ITERATIONS,
+        V1_LEGACY_PBKDF2_ITERATIONS,
+    ]:
+        try:
+            key = derive_passphrase_key(passphrase, iterations)
+            json_str = decrypt_data(key, data)
+            break
+        except Exception as err:
+            last_err = err
+            continue
+
+    if json_str is None:
+        raise last_err
+
+    imported = json.loads(json_str)
     store = _load_store()
     for name, config in imported["servers"].items():
         store["servers"][name] = config

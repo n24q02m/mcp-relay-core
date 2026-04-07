@@ -3,6 +3,7 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { decrypt } from '../../src/crypto/aes.js'
 import { deriveAesKey } from '../../src/crypto/kdf.js'
+import { deriveFileKey, derivePassphraseKey } from '../../src/storage/encryption.js'
 
 interface CryptoVectors {
   hkdf: {
@@ -16,6 +17,20 @@ interface CryptoVectors {
     iv_hex: string
     ciphertext_hex: string
     tag_hex: string
+  }
+  pbkdf2: {
+    config: {
+      material: string
+      iterations_1M: string
+      iterations_600k: string
+      iterations_100k: string
+    }
+    export: {
+      passphrase: string
+      iterations_1M: string
+      iterations_600k: string
+      iterations_100k: string
+    }
   }
 }
 
@@ -59,5 +74,40 @@ describe('cross-language crypto test vectors', () => {
 
     const plaintext = await decrypt(key, ciphertext, iv, tag)
     expect(plaintext).toBe(vectors.aes_gcm.plaintext)
+  })
+
+  describe('PBKDF2 vectors', () => {
+    it('config keys match vectors', async () => {
+      const v = vectors.pbkdf2.config
+      const [machineId, username] = v.material.split(':')
+
+      const key1M = await deriveFileKey(machineId, username, 1000000)
+      const raw1M = await crypto.subtle.exportKey('raw', key1M)
+      expect(Buffer.from(raw1M).toString('hex')).toBe(v.iterations_1M)
+
+      const key600k = await deriveFileKey(machineId, username, 600000)
+      const raw600k = await crypto.subtle.exportKey('raw', key600k)
+      expect(Buffer.from(raw600k).toString('hex')).toBe(v.iterations_600k)
+
+      const key100k = await deriveFileKey(machineId, username, 100000)
+      const raw100k = await crypto.subtle.exportKey('raw', key100k)
+      expect(Buffer.from(raw100k).toString('hex')).toBe(v.iterations_100k)
+    })
+
+    it('export keys match vectors', async () => {
+      const v = vectors.pbkdf2.export
+
+      const key1M = await derivePassphraseKey(v.passphrase, 1000000)
+      const raw1M = await crypto.subtle.exportKey('raw', key1M)
+      expect(Buffer.from(raw1M).toString('hex')).toBe(v.iterations_1M)
+
+      const key600k = await derivePassphraseKey(v.passphrase, 600000)
+      const raw600k = await crypto.subtle.exportKey('raw', key600k)
+      expect(Buffer.from(raw600k).toString('hex')).toBe(v.iterations_600k)
+
+      const key100k = await derivePassphraseKey(v.passphrase, 100000)
+      const raw100k = await crypto.subtle.exportKey('raw', key100k)
+      expect(Buffer.from(raw100k).toString('hex')).toBe(v.iterations_100k)
+    })
   })
 })

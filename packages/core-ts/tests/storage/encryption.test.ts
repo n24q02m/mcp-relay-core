@@ -5,7 +5,8 @@ import {
   derivePassphraseKey,
   encryptData,
   LEGACY_PBKDF2_ITERATIONS,
-  PBKDF2_ITERATIONS
+  PBKDF2_ITERATIONS,
+  V1_LEGACY_PBKDF2_ITERATIONS
 } from '../../src/storage/encryption.js'
 
 describe('deriveFileKey', () => {
@@ -41,6 +42,43 @@ describe('deriveFileKey', () => {
 
     const encrypted = await encryptData(key1, 'secret')
     await expect(decryptData(key2, encrypted)).rejects.toThrow()
+  })
+})
+
+describe('derivePassphraseKey', () => {
+  it('returns an AES-GCM CryptoKey', async () => {
+    const key = await derivePassphraseKey('my secret passphrase')
+    expect(key).toBeDefined()
+    expect(key.algorithm).toMatchObject({ name: 'AES-GCM', length: 256 })
+    expect(key.usages).toContain('encrypt')
+    expect(key.usages).toContain('decrypt')
+  })
+
+  it('same passphrase produces same key (deterministic)', async () => {
+    const passphrase = 'password123'
+    const key1 = await derivePassphraseKey(passphrase)
+    const key2 = await derivePassphraseKey(passphrase)
+
+    const encrypted = await encryptData(key1, 'top secret')
+    const decrypted = await decryptData(key2, encrypted)
+    expect(decrypted).toBe('top secret')
+  })
+
+  it('different passphrase produces different key', async () => {
+    const key1 = await derivePassphraseKey('passphrase-A')
+    const key2 = await derivePassphraseKey('passphrase-B')
+
+    const encrypted = await encryptData(key1, 'top secret')
+    await expect(decryptData(key2, encrypted)).rejects.toThrow()
+  })
+
+  it('supports all iteration counts', async () => {
+    const iterationsList = [PBKDF2_ITERATIONS, LEGACY_PBKDF2_ITERATIONS, V1_LEGACY_PBKDF2_ITERATIONS]
+    for (const iterations of iterationsList) {
+      const key = await derivePassphraseKey('pass', iterations)
+      expect(key).toBeDefined()
+      expect(key.algorithm).toMatchObject({ name: 'AES-GCM', length: 256 })
+    }
   })
 })
 
@@ -102,6 +140,13 @@ describe('PBKDF2 iterations', () => {
     const encrypted = await encryptData(keyLegacy, 'migration test')
     const decrypted = await decryptData(keyLegacy, encrypted)
     expect(decrypted).toBe('migration test')
+  })
+
+  it('v1 legacy key can decrypt legacy-encrypted data', async () => {
+    const keyV1 = await deriveFileKey('m', 'u', V1_LEGACY_PBKDF2_ITERATIONS)
+    const encrypted = await encryptData(keyV1, 'v1 migration test')
+    const decrypted = await decryptData(keyV1, encrypted)
+    expect(decrypted).toBe('v1 migration test')
   })
 
   it('passphrase key with different iterations produces different keys', async () => {

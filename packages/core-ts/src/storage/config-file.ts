@@ -8,7 +8,8 @@ import {
   derivePassphraseKey,
   encryptData,
   LEGACY_PBKDF2_ITERATIONS,
-  PBKDF2_ITERATIONS
+  PBKDF2_ITERATIONS,
+  V1_LEGACY_PBKDF2_ITERATIONS
 } from './encryption.js'
 import { getMachineId, getUsername } from './machine-id.js'
 
@@ -61,22 +62,21 @@ async function loadStore(): Promise<ConfigStore> {
   const [machineId, username] = await Promise.all([getMachineId(), getUsername()])
   const data = await readFile(configPath)
 
-  try {
-    const key = await deriveFileKey(machineId, username, PBKDF2_ITERATIONS)
-    const json = await decryptData(key, data)
-    return JSON.parse(json) as ConfigStore
-  } catch (err) {
+  for (const iterations of [PBKDF2_ITERATIONS, LEGACY_PBKDF2_ITERATIONS, V1_LEGACY_PBKDF2_ITERATIONS]) {
     try {
-      const legacyKey = await deriveFileKey(machineId, username, LEGACY_PBKDF2_ITERATIONS)
-      const json = await decryptData(legacyKey, data)
+      const key = await deriveFileKey(machineId, username, iterations)
+      const json = await decryptData(key, data)
       const store = JSON.parse(json) as ConfigStore
-      // Auto-migrate to current iterations
-      await saveStore(store)
+      // Auto-migrate if legacy
+      if (iterations !== PBKDF2_ITERATIONS) {
+        await saveStore(store)
+      }
       return store
-    } catch {
-      throw err
+    } catch (err) {
+      if (iterations === V1_LEGACY_PBKDF2_ITERATIONS) throw err
     }
   }
+  throw new Error('Unreachable')
 }
 
 async function saveStore(store: ConfigStore): Promise<void> {
@@ -127,22 +127,23 @@ export async function exportConfig(passphrase: string): Promise<Buffer> {
 }
 
 export async function importConfig(passphrase: string, data: Buffer): Promise<void> {
-  let json: string
-  try {
-    const key = await derivePassphraseKey(passphrase, PBKDF2_ITERATIONS)
-    json = await decryptData(key, data)
-  } catch (err) {
+  let json: string | undefined
+  let lastErr: unknown
+
+  for (const iterations of [PBKDF2_ITERATIONS, LEGACY_PBKDF2_ITERATIONS, V1_LEGACY_PBKDF2_ITERATIONS]) {
     try {
-      const legacyKey = await derivePassphraseKey(passphrase, LEGACY_PBKDF2_ITERATIONS)
-      json = await decryptData(legacyKey, data)
-    } catch {
-      throw err
+      const key = await derivePassphraseKey(passphrase, iterations)
+      json = await decryptData(key, data)
+      break
+    } catch (err) {
+      lastErr = err
     }
   }
-  const imported = JSON.parse(json) as ConfigStore
 
+  if (json === undefined) throw lastErr
+
+  const imported = JSON.parse(json) as ConfigStore
   const store = await loadStore()
-  // Merge imported servers into local config
   for (const [name, config] of Object.entries(imported.servers)) {
     store.servers[name] = config
   }

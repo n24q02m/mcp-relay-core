@@ -9,6 +9,7 @@ from pathlib import Path
 
 from mcp_relay_core.crypto.aes import decrypt
 from mcp_relay_core.crypto.kdf import derive_aes_key
+from mcp_relay_core.storage.encryption import derive_file_key, derive_passphrase_key
 
 VECTORS_PATH = Path(__file__).parent.parent / "fixtures" / "crypto-vectors.json"
 
@@ -66,3 +67,40 @@ class TestAESGCMVectors:
 
         plaintext = decrypt(key, ciphertext, iv, tag)
         assert plaintext == aes["plaintext"]
+
+
+class TestPBKDF2Vectors:
+    def test_config_keys_match_vectors(self):
+        vectors = _load_vectors()["pbkdf2"]["config"]
+        material = vectors["material"]
+        parts = material.split(":")
+        machine_id, username = parts[0], parts[1]
+
+        assert (
+            derive_file_key(machine_id, username, 1000000).hex()
+            == vectors["iterations_1M"]
+        )
+        assert (
+            derive_file_key(machine_id, username, 600000).hex()
+            == vectors["iterations_600k"]
+        )
+        assert (
+            derive_file_key(machine_id, username, 100000).hex()
+            == vectors["iterations_100k"]
+        )
+
+    def test_export_keys_match_vectors(self):
+        vectors = _load_vectors()["pbkdf2"]["export"]
+        passphrase = vectors["passphrase"]
+
+        assert (
+            derive_passphrase_key(passphrase, 1000000).hex() == vectors["iterations_1M"]
+        )
+        assert (
+            derive_passphrase_key(passphrase, 600000).hex()
+            == vectors["iterations_600k"]
+        )
+        assert (
+            derive_passphrase_key(passphrase, 100000).hex()
+            == vectors["iterations_100k"]
+        )
