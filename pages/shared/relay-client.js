@@ -1,4 +1,12 @@
-import { toBase64 } from './crypto.js'
+import {
+  deriveAesKey,
+  deriveSharedSecret,
+  encrypt,
+  exportPublicKey,
+  generateKeyPair,
+  importPublicKey,
+  toBase64
+} from './crypto.js'
 
 // Parse URL fragment: #k=<pubkey>&p=<passphrase>
 // Fragment is never sent to the server (RFC 3986)
@@ -7,7 +15,7 @@ export function parseFragment() {
   const params = new URLSearchParams(hash)
   return {
     publicKey: params.get('k'),
-    passphrase: decodeURIComponent(params.get('p') || ''),
+    passphrase: decodeURIComponent(params.get('p') || '')
   }
 }
 
@@ -16,13 +24,21 @@ export function getSessionId() {
   return new URLSearchParams(window.location.search).get('s')
 }
 
+// Get standard setup params or null if missing
+export function getSetupParams() {
+  const { publicKey: cliPubKeyB64, passphrase } = parseFragment()
+  const sessionId = getSessionId()
+  if (!cliPubKeyB64 || !passphrase || !sessionId) return null
+  return { cliPubKeyB64, passphrase, sessionId }
+}
+
 // Submit encrypted credentials to relay (with retry for Cloudflare challenges)
 export async function submitResult(sessionId, browserPub, ciphertext, iv, tag) {
   const body = JSON.stringify({
     browserPub,
     ciphertext: toBase64(ciphertext),
     iv: toBase64(iv),
-    tag: toBase64(tag),
+    tag: toBase64(tag)
   })
 
   const maxRetries = 3
@@ -30,7 +46,7 @@ export async function submitResult(sessionId, browserPub, ciphertext, iv, tag) {
     const response = await fetch(`/api/sessions/${sessionId}/result`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body,
+      body
     })
     if (response.ok) return { ok: true }
 
@@ -43,4 +59,34 @@ export async function submitResult(sessionId, browserPub, ciphertext, iv, tag) {
     return { ok: false, status: response.status, error: text }
   }
   return { ok: false, status: 0, error: 'Max retries exceeded' }
+}
+
+// Encrypt config and submit to relay
+export async function encryptAndSubmit(config, { cliPubKeyB64, passphrase, sessionId }) {
+  let cliPubKey, browserKeyPair, sharedSecret, aesKey
+  try {
+    cliPubKey = await importPublicKey(cliPubKeyB64)
+  } catch (e) {
+    throw new Error(`Key import failed (len=${cliPubKeyB64?.length}): ${e.name || e.message}`)
+  }
+  try {
+    browserKeyPair = await generateKeyPair()
+  } catch (e) {
+    throw new Error(`Key generation failed: ${e.name || e.message}`)
+  }
+  try {
+    sharedSecret = await deriveSharedSecret(browserKeyPair.privateKey, cliPubKey)
+  } catch (e) {
+    throw new Error(`Key exchange failed: ${e.name || e.message}`)
+  }
+  try {
+    aesKey = await deriveAesKey(sharedSecret, passphrase)
+  } catch (e) {
+    throw new Error(`Key derivation failed: ${e.name || e.message}`)
+  }
+
+  const { ciphertext, iv, tag } = await encrypt(aesKey, JSON.stringify(config))
+  const browserPub = await exportPublicKey(browserKeyPair.publicKey)
+
+  return await submitResult(sessionId, browserPub, ciphertext, iv, tag)
 }

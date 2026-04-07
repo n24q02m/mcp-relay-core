@@ -51,7 +51,9 @@ export function renderModes(container, modes, onSelect) {
     small.textContent = mode.description
     btn.append(strong, document.createElement('br'), small)
     btn.addEventListener('click', () => {
-      container.querySelectorAll('.mode-btn').forEach((b) => b.classList.remove('active'))
+      container.querySelectorAll('.mode-btn').forEach((b) => {
+        b.classList.remove('active')
+      })
       btn.classList.add('active')
       onSelect(mode)
     })
@@ -118,7 +120,8 @@ export function renderMessage(container, message) {
     if (oauthCode) {
       const code = document.createElement('code')
       code.textContent = oauthCode
-      code.style.cssText = 'display: block; font-size: 1.5em; padding: 12px; background: #f0f0f0; color: #1a1a2e; border-radius: 4px; text-align: center; letter-spacing: 3px; user-select: all; font-weight: bold;'
+      code.style.cssText =
+        'display: block; font-size: 1.5em; padding: 12px; background: #f0f0f0; color: #1a1a2e; border-radius: 4px; text-align: center; letter-spacing: 3px; user-select: all; font-weight: bold;'
       div.appendChild(code)
     }
   } else if (message.type === 'info') {
@@ -174,12 +177,14 @@ export function startMessagePolling(sessionId, statusContainer) {
           input.id = `input-${msg.id}`
           input.type = msg.data?.input_type || 'text'
           input.placeholder = msg.data?.placeholder || 'Enter value...'
-          input.style.cssText = 'width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid #555; background: #1a1a2e; color: #eee; box-sizing: border-box;'
+          input.style.cssText =
+            'width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid #555; background: #1a1a2e; color: #eee; box-sizing: border-box;'
           wrapper.appendChild(input)
 
           const btn = document.createElement('button')
           btn.textContent = 'Submit'
-          btn.style.cssText = 'background: #2980b9; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer;'
+          btn.style.cssText =
+            'background: #2980b9; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer;'
           const submitResponse = async () => {
             if (!input.value) return
             btn.disabled = true
@@ -193,11 +198,13 @@ export function startMessagePolling(sessionId, statusContainer) {
             // Collapse input, show waiting status
             input.style.display = 'none'
             btn.style.display = 'none'
-            label.textContent = label.textContent + ' — submitted, waiting for server...'
+            label.textContent = `${label.textContent} — submitted, waiting for server...`
             label.style.color = '#888'
           }
           btn.addEventListener('click', submitResponse)
-          input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitResponse() })
+          input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') submitResponse()
+          })
           wrapper.appendChild(btn)
           setTimeout(() => input.focus(), 100)
           messagesContainer.appendChild(wrapper)
@@ -216,7 +223,9 @@ export function startMessagePolling(sessionId, statusContainer) {
           return
         }
       }
-    } catch (e) { /* ignore */ }
+    } catch (_e) {
+      /* ignore */
+    }
     setTimeout(pollMessages, 2000)
   }
   pollMessages()
@@ -229,4 +238,42 @@ export function showStatus(container, message, type = 'info') {
   status.className = `status status-${type}`
   status.textContent = message
   container.appendChild(status)
+}
+
+/**
+ * Attaches a skip button to the form
+ * @param {HTMLElement} form - The form element to attach the button to
+ * @param {string} sessionId - The session ID
+ * @param {Object} options - Options for the skip button
+ * @param {string} options.label - The button label
+ * @param {string} options.successMessage - The message to show on success
+ */
+export function setupSkipButton(
+  form,
+  sessionId,
+  { label = 'Skip Setup (use defaults)', successMessage = 'Setup skipped.' } = {}
+) {
+  const skipBtn = document.createElement('button')
+  skipBtn.type = 'button'
+  skipBtn.textContent = label
+  skipBtn.style.cssText =
+    'background: transparent; color: #888; border: 1px solid #555; border-radius: 4px; padding: 8px 16px; cursor: pointer; width: 100%; margin-top: 8px;'
+  skipBtn.addEventListener('click', async () => {
+    skipBtn.disabled = true
+    const originalText = skipBtn.textContent
+    skipBtn.textContent = 'Skipping...'
+    try {
+      const response = await fetch(`/api/sessions/${sessionId}/skip`, { method: 'POST' })
+      if (response.ok) {
+        showStatus(document.getElementById('status-container'), successMessage, 'info')
+        form.style.display = 'none'
+      } else {
+        throw new Error('Skip failed')
+      }
+    } catch (_err) {
+      skipBtn.disabled = false
+      skipBtn.textContent = originalText
+    }
+  })
+  form.appendChild(skipBtn)
 }
