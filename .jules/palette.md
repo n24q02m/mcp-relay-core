@@ -1,3 +1,3 @@
-## 2024-05-24 - Accessible Dynamically Generated Inputs
-**Learning:** For frontend UX and accessibility in the 'pages/' directory, dynamically generated inputs via JavaScript must always use proper `<label>` tags explicitly linked to the input's unique ID using the `htmlFor` property, rather than using generic text tags (like `<p>`).
-**Action:** Always ensure that when generating form elements dynamically (e.g. `document.createElement`), `label` elements are appropriately tied to `input` elements using `htmlFor` and a matching `id`, and ensure labels have `display: block` if converting from paragraph tags to maintain original layout.
+## 2025-05-22 - [Optimization] Suboptimal Base64url encoding
+**Learning:** Sequential `.replace()` calls for characters like `+`, `/`, and `=` in Base64 strings can be optimized using a single regex and a mapper function.
+**Action:** Replaced multiple `.replace()` calls with `.replace(/[+/=]/g, m => ({ '+': '-', '/': '_' }[m] ?? ''))` in `pages/shared/crypto.js` to improve performance by reducing intermediate string allocations.
