@@ -22,45 +22,79 @@ def get_machine_id() -> str:
     Returns:
         Machine identifier string.
     """
-    system = platform.system()
     try:
+        system = platform.system()
         if system == "Linux":
-            with open("/etc/machine-id") as f:
-                return f.read().strip()
+            mid = _get_linux_id()
+            if mid:
+                return mid
 
         if system == "Darwin":
-            result = subprocess.run(
-                ["ioreg", "-rd1", "-c", "IOPlatformExpertDevice"],
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            match = re.search(r'"IOPlatformUUID"\s*=\s*"([^"]+)"', result.stdout)
-            if match:
-                return match.group(1)
+            mid = _get_darwin_id()
+            if mid:
+                return mid
 
         if system == "Windows":
-            result = subprocess.run(
-                [
-                    "reg",
-                    "query",
-                    r"HKLM\SOFTWARE\Microsoft\Cryptography",
-                    "/v",
-                    "MachineGuid",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            match = re.search(r"MachineGuid\s+REG_SZ\s+(\S+)", result.stdout)
-            if match:
-                return match.group(1)
+            mid = _get_windows_id()
+            if mid:
+                return mid
     except Exception:
         pass
 
     # Fallback: hostname + first MAC address
     mac = _get_first_mac()
     return f"{socket.gethostname()}-{mac}"
+
+
+def _get_linux_id() -> str | None:
+    """Get Linux machine ID from /etc/machine-id."""
+    try:
+        if os.path.exists("/etc/machine-id"):
+            with open("/etc/machine-id") as f:
+                return f.read().strip()
+    except Exception:
+        pass
+    return None
+
+
+def _get_darwin_id() -> str | None:
+    """Get macOS machine UUID via ioreg."""
+    try:
+        result = subprocess.run(
+            ["ioreg", "-rd1", "-c", "IOPlatformExpertDevice"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        match = re.search(r'"IOPlatformUUID"\s*=\s*"([^"]+)"', result.stdout)
+        if match:
+            return match.group(1)
+    except Exception:
+        pass
+    return None
+
+
+def _get_windows_id() -> str | None:
+    """Get Windows MachineGuid from registry."""
+    try:
+        result = subprocess.run(
+            [
+                "reg",
+                "query",
+                r"HKLM\SOFTWARE\Microsoft\Cryptography",
+                "/v",
+                "MachineGuid",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        match = re.search(r"MachineGuid\s+REG_SZ\s+(\S+)", result.stdout)
+        if match:
+            return match.group(1)
+    except Exception:
+        pass
+    return None
 
 
 def _get_first_mac() -> str:
