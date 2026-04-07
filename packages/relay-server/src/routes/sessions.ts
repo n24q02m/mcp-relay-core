@@ -27,8 +27,8 @@ sessionsRouter.post('/', (req: Request, res: Response) => {
     schema?: unknown
   }
 
-  if (!sessionId || !serverName) {
-    res.status(400).json({ error: 'sessionId and serverName are required' })
+  if (typeof sessionId !== 'string' || typeof serverName !== 'string') {
+    res.status(400).json({ error: 'sessionId and serverName are required and must be strings' })
     return
   }
 
@@ -42,9 +42,20 @@ sessionsRouter.post('/', (req: Request, res: Response) => {
     return
   }
 
-  if (schema !== undefined && JSON.stringify(schema).length > 65536) {
-    res.status(400).json({ error: 'schema too large (max 64KB)' })
-    return
+  if (schema !== undefined) {
+    if (typeof schema !== 'object' || schema === null || Array.isArray(schema)) {
+      res.status(400).json({ error: 'schema must be a plain object' })
+      return
+    }
+    try {
+      if (JSON.stringify(schema).length > 65536) {
+        res.status(400).json({ error: 'schema too large (max 64KB)' })
+        return
+      }
+    } catch (_e) {
+      res.status(400).json({ error: 'schema is not serializable' })
+      return
+    }
   }
 
   const sourceIp = req.ip ?? req.socket.remoteAddress ?? 'unknown'
@@ -89,8 +100,13 @@ sessionsRouter.post('/:id/result', (req: Request, res: Response) => {
     tag?: string
   }
 
-  if (!browserPub || !ciphertext || !iv || !tag) {
-    res.status(400).json({ error: 'browserPub, ciphertext, iv, and tag are required' })
+  if (
+    typeof browserPub !== 'string' ||
+    typeof ciphertext !== 'string' ||
+    typeof iv !== 'string' ||
+    typeof tag !== 'string'
+  ) {
+    res.status(400).json({ error: 'browserPub, ciphertext, iv, and tag are required and must be strings' })
     return
   }
 
@@ -138,8 +154,8 @@ sessionsRouter.post('/:id/messages', (req: Request, res: Response) => {
     data?: Record<string, unknown>
   }
 
-  if (!type || !text) {
-    res.status(400).json({ error: 'type and text are required' })
+  if (typeof type !== 'string' || typeof text !== 'string') {
+    res.status(400).json({ error: 'type and text are required and must be strings' })
     return
   }
 
@@ -148,9 +164,20 @@ sessionsRouter.post('/:id/messages', (req: Request, res: Response) => {
     return
   }
 
-  if (data !== undefined && JSON.stringify(data).length > 65536) {
-    res.status(400).json({ error: 'data too large (max 64KB)' })
-    return
+  if (data !== undefined) {
+    if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+      res.status(400).json({ error: 'data must be a plain object' })
+      return
+    }
+    try {
+      if (JSON.stringify(data).length > 65536) {
+        res.status(400).json({ error: 'data too large (max 64KB)' })
+        return
+      }
+    } catch (_e) {
+      res.status(400).json({ error: 'data is not serializable' })
+      return
+    }
   }
 
   const session = getSession(paramId(req))
@@ -191,8 +218,8 @@ sessionsRouter.post('/:id/responses', (req: Request, res: Response) => {
     value?: string
   }
 
-  if (!messageId || value === undefined) {
-    res.status(400).json({ error: 'messageId and value are required' })
+  if (typeof messageId !== 'string' || typeof value !== 'string') {
+    res.status(400).json({ error: 'messageId and value are required and must be strings' })
     return
   }
 
