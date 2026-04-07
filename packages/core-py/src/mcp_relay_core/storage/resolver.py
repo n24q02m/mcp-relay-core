@@ -44,8 +44,32 @@ def resolve_config(
         ResolvedConfig with config dict and source.
     """
     # 1. Check env vars
-    env_config: dict[str, str] = {}
-    all_env_present = len(required_fields) > 0
+    env_config = _resolve_from_env(server_name, required_fields)
+    if env_config is not None:
+        return ResolvedConfig(config=env_config, source="env")
+
+    # 2. Check config file
+    file_config = _resolve_from_file(server_name, required_fields)
+    if file_config is not None:
+        return ResolvedConfig(config=file_config, source="file")
+
+    # 3. Check defaults
+    default_config = _resolve_from_defaults(required_fields, defaults)
+    if default_config is not None:
+        return ResolvedConfig(config=default_config, source="defaults")
+
+    # 4. Nothing found
+    return ResolvedConfig(config=None, source=None)
+
+
+def _resolve_from_env(
+    server_name: str, required_fields: list[str]
+) -> dict[str, str] | None:
+    """Try to resolve config from environment variables."""
+    if not required_fields:
+        return None
+
+    config: dict[str, str] = {}
     for field in required_fields:
         env_key = (
             "MCP_"
@@ -54,28 +78,31 @@ def resolve_config(
             + re.sub(r"-", "_", field).upper()
         )
         value = os.environ.get(env_key, "")
-        if value:
-            env_config[field] = value
-        else:
-            all_env_present = False
+        if not value:
+            return None
+        config[field] = value
 
-    if all_env_present:
-        return ResolvedConfig(config=env_config, source="env")
+    return config
 
-    # 2. Check config file
-    file_config = read_config(server_name)
-    if file_config is not None:
-        has_all = all(
-            f in file_config and file_config[f] != "" for f in required_fields
-        )
-        if has_all:
-            return ResolvedConfig(config=file_config, source="file")
 
-    # 3. Check defaults
-    if defaults is not None:
-        has_all = all(f in defaults and defaults[f] != "" for f in required_fields)
-        if has_all:
-            return ResolvedConfig(config={**defaults}, source="defaults")
+def _resolve_from_file(
+    server_name: str, required_fields: list[str]
+) -> dict[str, str] | None:
+    """Try to resolve config from the encrypted config file."""
+    config = read_config(server_name)
+    if config is None:
+        return None
 
-    # 4. Nothing found
-    return ResolvedConfig(config=None, source=None)
+    has_all = all(f in config and config[f] != "" for f in required_fields)
+    return config if has_all else None
+
+
+def _resolve_from_defaults(
+    required_fields: list[str], defaults: dict[str, str] | None
+) -> dict[str, str] | None:
+    """Try to resolve config from provided defaults."""
+    if defaults is None:
+        return None
+
+    has_all = all(f in defaults and defaults[f] != "" for f in required_fields)
+    return {**defaults} if has_all else None
