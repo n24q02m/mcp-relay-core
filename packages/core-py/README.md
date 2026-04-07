@@ -50,19 +50,6 @@ async def setup():
 asyncio.run(setup())
 ```
 
-### Crypto primitives
-
-```python
-from mcp_relay_core import (
-    generate_key_pair,
-    export_public_key,
-    derive_shared_secret,
-    derive_aes_key,
-    encrypt,
-    decrypt,
-)
-```
-
 ## Documentation
 
 See the [main repository](https://github.com/n24q02m/mcp-relay-core) for full documentation, architecture, and security properties.

@@ -1,13 +1,5 @@
 """Zero-env-config credential relay for MCP servers."""
 
-from mcp_relay_core.crypto.aes import decrypt, encrypt
-from mcp_relay_core.crypto.ecdh import (
-    derive_shared_secret,
-    export_public_key,
-    generate_key_pair,
-    import_public_key,
-)
-from mcp_relay_core.crypto.kdf import derive_aes_key
 from mcp_relay_core.relay.browser import try_open_browser
 from mcp_relay_core.relay.client import (
     RelaySession,
@@ -35,13 +27,6 @@ from mcp_relay_core.storage.session_lock import (
 )
 
 __all__ = [
-    "decrypt",
-    "derive_aes_key",
-    "derive_shared_secret",
-    "export_public_key",
-    "generate_key_pair",
-    "import_public_key",
-    "encrypt",
     "RelaySession",
     "create_session",
     "generate_passphrase",
