@@ -23,7 +23,57 @@ class ResolvedConfig:
         self.source = source
 
 
-def resolve_config(
+async def _resolve_from_env(
+    server_name: str,
+    required_fields: list[str],
+) -> dict[str, str] | None:
+    """Check environment variables for config."""
+    env_config: dict[str, str] = {}
+    all_env_present = len(required_fields) > 0
+    for field in required_fields:
+        env_key = (
+            "MCP_"
+            + re.sub(r"-", "_", server_name).upper()
+            + "_"
+            + re.sub(r"-", "_", field).upper()
+        )
+        value = os.environ.get(env_key, "")
+        if value:
+            env_config[field] = value
+        else:
+            all_env_present = False
+
+    return env_config if all_env_present else None
+
+
+async def _resolve_from_file(
+    server_name: str,
+    required_fields: list[str],
+) -> dict[str, str] | None:
+    """Check encrypted config file for config."""
+    file_config = await read_config(server_name)
+    if file_config is not None:
+        has_all = all(
+            f in file_config and file_config[f] != "" for f in required_fields
+        )
+        if has_all:
+            return file_config
+    return None
+
+
+async def _resolve_from_defaults(
+    required_fields: list[str],
+    defaults: dict[str, str] | None = None,
+) -> dict[str, str] | None:
+    """Check provided defaults for config."""
+    if defaults is not None:
+        has_all = all(f in defaults and defaults[f] != "" for f in required_fields)
+        if has_all:
+            return {**defaults}
+    return None
+
+
+async def resolve_config(
     server_name: str,
     required_fields: list[str],
     defaults: dict[str, str] | None = None,
@@ -44,38 +94,19 @@ def resolve_config(
         ResolvedConfig with config dict and source.
     """
     # 1. Check env vars
-    env_config: dict[str, str] = {}
-    all_env_present = len(required_fields) > 0
-    for field in required_fields:
-        env_key = (
-            "MCP_"
-            + re.sub(r"-", "_", server_name).upper()
-            + "_"
-            + re.sub(r"-", "_", field).upper()
-        )
-        value = os.environ.get(env_key, "")
-        if value:
-            env_config[field] = value
-        else:
-            all_env_present = False
-
-    if all_env_present:
+    env_config = await _resolve_from_env(server_name, required_fields)
+    if env_config:
         return ResolvedConfig(config=env_config, source="env")
 
     # 2. Check config file
-    file_config = read_config(server_name)
-    if file_config is not None:
-        has_all = all(
-            f in file_config and file_config[f] != "" for f in required_fields
-        )
-        if has_all:
-            return ResolvedConfig(config=file_config, source="file")
+    file_config = await _resolve_from_file(server_name, required_fields)
+    if file_config:
+        return ResolvedConfig(config=file_config, source="file")
 
     # 3. Check defaults
-    if defaults is not None:
-        has_all = all(f in defaults and defaults[f] != "" for f in required_fields)
-        if has_all:
-            return ResolvedConfig(config={**defaults}, source="defaults")
+    default_config = await _resolve_from_defaults(required_fields, defaults)
+    if default_config:
+        return ResolvedConfig(config=default_config, source="defaults")
 
     # 4. Nothing found
     return ResolvedConfig(config=None, source=None)

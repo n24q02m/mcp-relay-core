@@ -7,6 +7,7 @@ max 10 sessions/IP/10min).
 Lock file location: <config_dir>/mcp/relay-session-<server>.lock
 """
 
+import asyncio
 import json
 import logging
 import time
@@ -68,10 +69,11 @@ async def acquire_session_lock(
     """
     path = _lock_path(server_name)
     try:
-        if not path.exists():
+        if not await asyncio.to_thread(path.exists):
             return None
 
-        data = json.loads(path.read_text(encoding="utf-8"))
+        content = await asyncio.to_thread(path.read_text, encoding="utf-8")
+        data = json.loads(content)
         info = SessionInfo(
             session_id=data["session_id"],
             relay_url=data["relay_url"],
@@ -115,7 +117,7 @@ async def write_session_lock(server_name: str, info: SessionInfo) -> None:
         info: Session information to persist.
     """
     path = _lock_path(server_name)
-    path.parent.mkdir(parents=True, exist_ok=True)
+    await asyncio.to_thread(path.parent.mkdir, parents=True, exist_ok=True)
 
     data = {
         "session_id": info.session_id,
@@ -123,10 +125,13 @@ async def write_session_lock(server_name: str, info: SessionInfo) -> None:
         "created_at": info.created_at,
     }
 
-    # Write atomically via temp file + rename
-    tmp_path = path.with_suffix(".tmp")
-    tmp_path.write_text(json.dumps(data), encoding="utf-8")
-    tmp_path.replace(path)
+    def _write_atomic() -> None:
+        # Write atomically via temp file + rename
+        tmp_path = path.with_suffix(".tmp")
+        tmp_path.write_text(json.dumps(data), encoding="utf-8")
+        tmp_path.replace(path)
+
+    await asyncio.to_thread(_write_atomic)
 
     logger.debug("Wrote session lock for %s", server_name)
 
@@ -139,7 +144,7 @@ async def release_session_lock(server_name: str) -> None:
     """
     path = _lock_path(server_name)
     try:
-        path.unlink(missing_ok=True)
+        await asyncio.to_thread(path.unlink, missing_ok=True)
         logger.debug("Released session lock for %s", server_name)
     except OSError as err:
         logger.debug("Failed to release session lock for %s: %s", server_name, err)
