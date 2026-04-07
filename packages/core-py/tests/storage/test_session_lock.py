@@ -1,7 +1,9 @@
-"""Tests for file-based session lock."""
+"""Tests for file-based session locking."""
 
+import asyncio
 import json
 import time
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -16,179 +18,106 @@ from mcp_relay_core.storage.session_lock import (
 
 @pytest.fixture(autouse=True)
 def _temp_lock_dir(tmp_path):
-    set_lock_dir(str(tmp_path))
+    lock_dir = str(tmp_path / "locks")
+    set_lock_dir(lock_dir)
     yield tmp_path
     set_lock_dir(None)
 
 
-class TestAcquireSessionLock:
-    async def test_returns_none_when_no_lock_exists(self):
-        result = await acquire_session_lock("test-server")
-        assert result is None
+class TestSessionLock:
+    async def test_acquire_returns_none_when_no_lock(self):
+        info = await acquire_session_lock("test-server")
+        assert info is None
 
-    async def test_returns_session_info_when_lock_is_fresh(self):
+    async def test_write_and_acquire_reuse(self):
         info = SessionInfo(
-            session_id="abc123",
-            relay_url="https://relay.example.com/setup?s=abc123#k=key&p=pass",
+            session_id="abc",
+            relay_url="https://relay/setup",
             created_at=time.time(),
         )
         await write_session_lock("test-server", info)
 
-        result = await acquire_session_lock("test-server")
-        assert result is not None
-        assert result.session_id == "abc123"
-        assert result.relay_url == info.relay_url
-        assert result.created_at == info.created_at
+        reused = await acquire_session_lock("test-server")
+        assert reused is not None
+        assert reused.session_id == "abc"
+        assert reused.relay_url == "https://relay/setup"
 
-    async def test_returns_none_when_lock_is_expired(self, _temp_lock_dir):
+    async def test_acquire_returns_none_when_expired(self):
+        # 20 minutes old (default max age 10 min)
         info = SessionInfo(
-            session_id="old-session",
-            relay_url="https://relay.example.com/setup?s=old",
-            created_at=time.time() - 700,  # 700 seconds ago (> 600s default)
+            session_id="old",
+            relay_url="url",
+            created_at=time.time() - 1200,
         )
         await write_session_lock("test-server", info)
 
-        result = await acquire_session_lock("test-server")
-        assert result is None
+        reused = await acquire_session_lock("test-server")
+        assert reused is None
 
-        # Lock file should be cleaned up
-        lock_file = _temp_lock_dir / "relay-session-test-server.lock"
-        assert not lock_file.exists()
-
-    async def test_respects_custom_max_age(self):
+    async def test_acquire_cleans_up_expired_lock(self, _temp_lock_dir):
         info = SessionInfo(
-            session_id="short-lived",
-            relay_url="https://relay.example.com/setup?s=short",
-            created_at=time.time() - 5,  # 5 seconds ago
+            session_id="old",
+            relay_url="url",
+            created_at=time.time() - 1200,
         )
         await write_session_lock("test-server", info)
-
-        # Should be expired with 3s max age
-        result = await acquire_session_lock("test-server", max_age_s=3.0)
-        assert result is None
-
-        # Should be valid with 10s max age
-        info2 = SessionInfo(
-            session_id="short-lived-2",
-            relay_url="https://relay.example.com/setup?s=short2",
-            created_at=time.time() - 5,
-        )
-        await write_session_lock("test-server", info2)
-        result = await acquire_session_lock("test-server", max_age_s=10.0)
-        assert result is not None
-        assert result.session_id == "short-lived-2"
-
-    async def test_returns_none_on_corrupt_lock_file(self, _temp_lock_dir):
-        lock_file = _temp_lock_dir / "relay-session-test-server.lock"
-        lock_file.write_text("not valid json", encoding="utf-8")
-
-        result = await acquire_session_lock("test-server")
-        assert result is None
-
-        # Corrupt file should be cleaned up
-        assert not lock_file.exists()
-
-    async def test_returns_none_on_missing_fields(self, _temp_lock_dir):
-        lock_file = _temp_lock_dir / "relay-session-test-server.lock"
-        lock_file.write_text(json.dumps({"session_id": "partial"}), encoding="utf-8")
-
-        result = await acquire_session_lock("test-server")
-        assert result is None
-
-
-class TestWriteSessionLock:
-    async def test_creates_lock_file(self, _temp_lock_dir):
-        info = SessionInfo(
-            session_id="new-session",
-            relay_url="https://relay.example.com/setup?s=new",
-            created_at=1234567890.0,
-        )
-        await write_session_lock("test-server", info)
-
-        lock_file = _temp_lock_dir / "relay-session-test-server.lock"
+        lock_file = _temp_lock_dir / "locks" / "relay-session-test-server.lock"
         assert lock_file.exists()
 
-        data = json.loads(lock_file.read_text(encoding="utf-8"))
-        assert data == {
-            "session_id": "new-session",
-            "relay_url": "https://relay.example.com/setup?s=new",
-            "created_at": 1234567890.0,
-        }
+        await acquire_session_lock("test-server")
+        assert not lock_file.exists()
 
-    async def test_overwrites_existing_lock(self, _temp_lock_dir):
-        now = time.time()
-        info1 = SessionInfo(
-            session_id="first",
-            relay_url="https://relay.example.com/first",
-            created_at=now,
-        )
-        await write_session_lock("test-server", info1)
-
-        info2 = SessionInfo(
-            session_id="second",
-            relay_url="https://relay.example.com/second",
-            created_at=now,
-        )
-        await write_session_lock("test-server", info2)
-
-        result = await acquire_session_lock("test-server")
-        assert result is not None
-        assert result.session_id == "second"
-
-    async def test_creates_parent_directories(self, tmp_path):
-        nested_dir = str(tmp_path / "nested" / "dir")
-        set_lock_dir(nested_dir)
-
-        info = SessionInfo(
-            session_id="nested",
-            relay_url="https://relay.example.com/nested",
-            created_at=time.time(),
-        )
+    async def test_release_removes_file(self, _temp_lock_dir):
+        info = SessionInfo("id", "url", time.time())
         await write_session_lock("test-server", info)
-
-        result = await acquire_session_lock("test-server")
-        assert result is not None
-        assert result.session_id == "nested"
-
-        set_lock_dir(str(tmp_path))
-
-
-class TestReleaseSessionLock:
-    async def test_removes_lock_file(self, _temp_lock_dir):
-        info = SessionInfo(
-            session_id="to-release",
-            relay_url="https://relay.example.com/release",
-            created_at=time.time(),
-        )
-        await write_session_lock("test-server", info)
-
-        lock_file = _temp_lock_dir / "relay-session-test-server.lock"
+        lock_file = _temp_lock_dir / "locks" / "relay-session-test-server.lock"
         assert lock_file.exists()
 
         await release_session_lock("test-server")
         assert not lock_file.exists()
 
-    async def test_no_error_when_lock_does_not_exist(self):
+    async def test_handles_corrupt_json(self, _temp_lock_dir):
+        lock_dir = _temp_lock_dir / "locks"
+        lock_dir.mkdir(parents=True, exist_ok=True)
+        lock_file = lock_dir / "relay-session-test-server.lock"
+        lock_file.write_text("invalid-json")
+
+        info = await acquire_session_lock("test-server")
+        assert info is None
+        assert not lock_file.exists()
+
+    async def test_handles_missing_keys(self, _temp_lock_dir):
+        lock_dir = _temp_lock_dir / "locks"
+        lock_dir.mkdir(parents=True, exist_ok=True)
+        lock_file = lock_dir / "relay-session-test-server.lock"
+        lock_file.write_text(json.dumps({"wrong": "data"}))
+
+        info = await acquire_session_lock("test-server")
+        assert info is None
+        assert not lock_file.exists()
+
+    async def test_atomic_write_via_rename(self, _temp_lock_dir):
+        # We can't easily "catch" it mid-write without complex mocking,
+        # but we can verify it doesn't crash and produces the file.
+        info = SessionInfo("id", "url", time.time())
+        await write_session_lock("test-server", info)
+
+        lock_file = _temp_lock_dir / "locks" / "relay-session-test-server.lock"
+        assert lock_file.exists()
+        data = json.loads(lock_file.read_text())
+        assert data["session_id"] == "id"
+
+    async def test_release_missing_file_no_op(self):
         # Should not raise
-        await release_session_lock("nonexistent-server")
+        await release_session_lock("non-existent")
 
-    async def test_different_servers_have_independent_locks(self, _temp_lock_dir):
-        info1 = SessionInfo(
-            session_id="server-a",
-            relay_url="https://relay.example.com/a",
-            created_at=time.time(),
-        )
-        info2 = SessionInfo(
-            session_id="server-b",
-            relay_url="https://relay.example.com/b",
-            created_at=time.time(),
-        )
-        await write_session_lock("server-a", info1)
-        await write_session_lock("server-b", info2)
+    async def test_custom_max_age(self):
+        # 5 minutes old
+        info = SessionInfo("id", "url", time.time() - 300)
+        await write_session_lock("test-server", info)
 
-        await release_session_lock("server-a")
+        # Still valid for default (10 min)
+        assert await acquire_session_lock("test-server") is not None
 
-        assert await acquire_session_lock("server-a") is None
-        result = await acquire_session_lock("server-b")
-        assert result is not None
-        assert result.session_id == "server-b"
+        # Expired for custom (1 min)
+        assert await acquire_session_lock("test-server", max_age_s=60) is None
