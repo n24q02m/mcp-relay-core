@@ -48,7 +48,7 @@ docker run -p 3000:8080 mcp-relay-server
 |----------|---------|-------------|
 | `PORT` | `3000` | Server listen port |
 | `PAGES_DIR` | - | Directory for static relay form pages |
-| `CORS_ORIGIN` | `*` | CORS allowed origin |
+| `CORS_ORIGIN` | - | CORS allowed origin (disabled by default) |
 
 ## Security properties
 

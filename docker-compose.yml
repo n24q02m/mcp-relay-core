@@ -7,7 +7,6 @@ services:
     environment:
       - PORT=8080
       - PAGES_DIR=/app/pages
-      - CORS_ORIGIN=*
     mem_limit: 128m
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/api/sessions"]

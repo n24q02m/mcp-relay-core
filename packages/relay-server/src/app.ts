@@ -12,11 +12,19 @@ export function createApp(): express.Express {
 
   const rawOrigin = process.env.CORS_ORIGIN
   let corsOrigin: boolean | string | string[] = false // Restrictive default: block cross-origin
-  if (rawOrigin) {
+  if (rawOrigin && rawOrigin !== '') {
     if (rawOrigin === '*') {
+      if (process.env.NODE_ENV === 'production') {
+        console.warn(
+          'SECURITY WARNING: CORS_ORIGIN is set to "*". This allows any origin to access the API and is insecure for production environments.'
+        )
+      }
       corsOrigin = '*'
     } else {
-      corsOrigin = rawOrigin.split(',').map((o) => o.trim())
+      corsOrigin = rawOrigin
+        .split(',')
+        .map((o) => o.trim())
+        .filter((o) => o.length > 0)
     }
   }
 
