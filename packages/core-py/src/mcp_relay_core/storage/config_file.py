@@ -197,6 +197,7 @@ def import_config(passphrase: str, data: bytes) -> None:
                 continue
 
     if json_str is None:
+        assert last_err is not None
         raise last_err from None
 
     imported = json.loads(json_str)

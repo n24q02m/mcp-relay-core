@@ -41,9 +41,8 @@ describe('generatePassphrase', () => {
       const passphrase = generatePassphrase()
       const words = passphrase.split('-')
       for (const w of words) {
-        if (!wordSet.has(w)) {
-          console.error(`Word not in list: "${w}" (from passphrase: "${passphrase}")`)
-        }
+        // expect(...) provides better context on failure than manual console.error,
+        // and avoids CodeQL cleartext logging alerts for passphrases.
         expect(wordSet.has(w)).toBe(true)
       }
     }
