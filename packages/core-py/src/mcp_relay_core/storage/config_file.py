@@ -85,11 +85,9 @@ def _load_store() -> dict[str, Any]:
                 _save_store(store)
             return store
         except Exception:
-            continue
+            if iterations == V1_LEGACY_PBKDF2_ITERATIONS:
+                raise
 
-    # If all failed, re-raise error with current iterations
-    key = derive_file_key(machine_id, username, PBKDF2_ITERATIONS)
-    decrypt_data(key, data)
     return {"version": 1, "servers": {}}  # Unreachable
 
 
@@ -184,7 +182,6 @@ def import_config(passphrase: str, data: bytes) -> None:
         cryptography.exceptions.InvalidTag: If passphrase is wrong.
     """
     json_str = None
-    last_err = None
 
     for iterations in [
         PBKDF2_ITERATIONS,
@@ -195,12 +192,13 @@ def import_config(passphrase: str, data: bytes) -> None:
             key = derive_passphrase_key(passphrase, iterations)
             json_str = decrypt_data(key, data)
             break
-        except Exception as err:
-            last_err = err
-            continue
+        except Exception:
+            if iterations == V1_LEGACY_PBKDF2_ITERATIONS:
+                raise
 
     if json_str is None:
-        raise last_err
+        msg = "Unreachable"
+        raise RuntimeError(msg)
 
     imported = json.loads(json_str)
     store = _load_store()
