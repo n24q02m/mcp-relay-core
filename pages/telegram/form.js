@@ -1,13 +1,5 @@
-import { parseFragment, getSessionId, submitResult } from '/shared/relay-client.js'
-import {
-  importPublicKey,
-  generateKeyPair,
-  deriveSharedSecret,
-  deriveAesKey,
-  encrypt,
-  exportPublicKey,
-} from '/shared/crypto.js'
-import { renderModes, renderFields, showStatus, startMessagePolling } from '/shared/ui.js'
+import { parseFragment, getSessionId, encryptAndSubmit } from '/shared/relay-client.js'
+import { renderModes, renderFields, showStatus, startMessagePolling, renderSkipButton } from '/shared/ui.js'
 
 const schema = {
   modes: [
@@ -46,12 +38,11 @@ const schema = {
 const { publicKey: cliPubKeyB64, passphrase } = parseFragment()
 const sessionId = getSessionId()
 
+const statusContainer = document.getElementById('status-container')
+const setupForm = document.getElementById('setup-form')
+
 if (!cliPubKeyB64 || !passphrase || !sessionId) {
-  showStatus(
-    document.getElementById('status-container'),
-    'Invalid setup URL. Please use the URL from your terminal.',
-    'error'
-  )
+  showStatus(statusContainer, 'Invalid setup URL. Please use the URL from your terminal.', 'error')
 } else {
   const modesContainer = document.getElementById('modes')
   const fieldsContainer = document.getElementById('fields')
@@ -65,77 +56,35 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
     submitBtn.disabled = false
   })
 
-  document.getElementById('setup-form').addEventListener('submit', async (e) => {
+  setupForm.addEventListener('submit', async (e) => {
     e.preventDefault()
     submitBtn.disabled = true
     submitBtn.textContent = 'Encrypting...'
 
     try {
-      // Collect form values
       const config = {}
       for (const field of currentFields) {
         const input = document.getElementById(field.key)
         if (input?.value) config[field.key] = input.value
       }
 
-      // ECDH key exchange
-      let cliPubKey, browserKeyPair, sharedSecret, aesKey
-      try { cliPubKey = await importPublicKey(cliPubKeyB64) } catch (e) {
-        throw new Error(`Key import failed (len=${cliPubKeyB64?.length}): ${e.name || e.message}`)
-      }
-      try { browserKeyPair = await generateKeyPair() } catch (e) {
-        throw new Error(`Key generation failed: ${e.name || e.message}`)
-      }
-      try { sharedSecret = await deriveSharedSecret(browserKeyPair.privateKey, cliPubKey) } catch (e) {
-        throw new Error(`Key exchange failed: ${e.name || e.message}`)
-      }
-      try { aesKey = await deriveAesKey(sharedSecret, passphrase) } catch (e) {
-        throw new Error(`Key derivation failed: ${e.name || e.message}`)
-      }
-
-      // Encrypt
-      const { ciphertext, iv, tag } = await encrypt(aesKey, JSON.stringify(config))
-      const browserPub = await exportPublicKey(browserKeyPair.publicKey)
-
-      // Submit
-      const result = await submitResult(sessionId, browserPub, ciphertext, iv, tag)
+      const result = await encryptAndSubmit(sessionId, cliPubKeyB64, passphrase, config)
       if (result.ok) {
-        document.getElementById('setup-form').style.display = 'none'
-        showStatus(
-          document.getElementById('status-container'),
-          'Credentials sent. Waiting for server...',
-          'info'
-        )
-        startMessagePolling(sessionId, document.getElementById('status-container'))
+        setupForm.style.display = 'none'
+        showStatus(statusContainer, 'Credentials sent. Waiting for server...', 'success')
+        startMessagePolling(sessionId, statusContainer)
       } else {
         throw new Error(`Submit failed (${result.status}): ${result.error || 'unknown error'}`)
       }
     } catch (err) {
-      const msg = err?.message || err?.name || String(err) || 'Unknown encryption error'
-      console.error('Relay submit error:', err)
-      showStatus(document.getElementById('status-container'), `Error: ${msg}`, 'error')
+      showStatus(statusContainer, `Error: ${err.message || String(err)}`, 'error')
       submitBtn.disabled = false
       submitBtn.textContent = 'Encrypt & Send'
     }
   })
 
-  const skipBtn = document.createElement('button')
-  skipBtn.type = 'button'
-  skipBtn.textContent = 'Skip Setup (use defaults)'
-  skipBtn.style.cssText = 'background: transparent; color: #888; border: 1px solid #555; border-radius: 4px; padding: 8px 16px; cursor: pointer; width: 100%; margin-top: 8px;'
-  skipBtn.addEventListener('click', async () => {
-    skipBtn.disabled = true
-    skipBtn.textContent = 'Skipping...'
-    try {
-      const response = await fetch(`/api/sessions/${sessionId}/skip`, { method: 'POST' })
-      if (response.ok) {
-        showStatus(document.getElementById('status-container'), 'Setup skipped. Server will use default settings.', 'info')
-        document.getElementById('setup-form').style.display = 'none'
-      }
-    } catch (err) {
-      skipBtn.disabled = false
-      skipBtn.textContent = 'Skip Setup (use defaults)'
-    }
+  renderSkipButton(setupForm, sessionId, () => {
+    showStatus(statusContainer, 'Setup skipped. Server will use default settings.', 'info')
+    setupForm.style.display = 'none'
   })
-  document.getElementById('setup-form').appendChild(skipBtn)
 }

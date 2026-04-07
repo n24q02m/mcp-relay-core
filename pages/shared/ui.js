@@ -230,3 +230,26 @@ export function showStatus(container, message, type = 'info') {
   status.textContent = message
   container.appendChild(status)
 }
+
+// Render skip button
+export function renderSkipButton(container, sessionId, onSkip) {
+  const skipBtn = document.createElement('button')
+  skipBtn.type = 'button'
+  skipBtn.textContent = 'Skip Setup (use defaults)'
+  skipBtn.style.cssText = 'background: transparent; color: #888; border: 1px solid #555; border-radius: 4px; padding: 8px 16px; cursor: pointer; width: 100%; margin-top: 8px;'
+  skipBtn.addEventListener('click', async () => {
+    skipBtn.disabled = true
+    skipBtn.textContent = 'Skipping...'
+    try {
+      const response = await fetch(`/api/sessions/${sessionId}/skip`, { method: 'POST' })
+      if (response.ok) {
+        if (onSkip) onSkip()
+      }
+    } catch (err) {
+      skipBtn.disabled = false
+      skipBtn.textContent = 'Skip Setup (use defaults)'
+    }
+  })
+  container.appendChild(skipBtn)
+  return skipBtn
+}
