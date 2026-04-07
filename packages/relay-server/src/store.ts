@@ -68,6 +68,11 @@ export function createSession(id: string, serverName: string, schema: unknown, s
     return null
   }
 
+  const existing = sessions.get(id)
+  if (existing) {
+    decrementIpCount(existing.sourceIp)
+  }
+
   const session: Session = {
     id,
     serverName,
