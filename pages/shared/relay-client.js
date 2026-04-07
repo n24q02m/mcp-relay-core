@@ -1,4 +1,12 @@
-import { toBase64 } from './crypto.js'
+import {
+  deriveAesKey,
+  deriveSharedSecret,
+  encrypt,
+  exportPublicKey,
+  generateKeyPair,
+  importPublicKey,
+  toBase64
+} from './crypto.js'
 
 // Parse URL fragment: #k=<pubkey>&p=<passphrase>
 // Fragment is never sent to the server (RFC 3986)
@@ -7,7 +15,7 @@ export function parseFragment() {
   const params = new URLSearchParams(hash)
   return {
     publicKey: params.get('k'),
-    passphrase: decodeURIComponent(params.get('p') || ''),
+    passphrase: decodeURIComponent(params.get('p') || '')
   }
 }
 
@@ -22,7 +30,7 @@ export async function submitResult(sessionId, browserPub, ciphertext, iv, tag) {
     browserPub,
     ciphertext: toBase64(ciphertext),
     iv: toBase64(iv),
-    tag: toBase64(tag),
+    tag: toBase64(tag)
   })
 
   const maxRetries = 3
@@ -30,7 +38,7 @@ export async function submitResult(sessionId, browserPub, ciphertext, iv, tag) {
     const response = await fetch(`/api/sessions/${sessionId}/result`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body,
+      body
     })
     if (response.ok) return { ok: true }
 
@@ -43,4 +51,50 @@ export async function submitResult(sessionId, browserPub, ciphertext, iv, tag) {
     return { ok: false, status: response.status, error: text }
   }
   return { ok: false, status: 0, error: 'Max retries exceeded' }
+}
+
+/**
+ * Encrypts the configuration using the provided CLI public key and passphrase,
+ * then submits it to the relay server.
+ */
+export async function encryptAndSubmit(sessionId, cliPubKeyB64, passphrase, config) {
+  let cliPubKey
+  try {
+    cliPubKey = await importPublicKey(cliPubKeyB64)
+  } catch (e) {
+    throw new Error(`Key import failed (len=${cliPubKeyB64?.length}): ${e.name || e.message}`)
+  }
+
+  let browserKeyPair
+  try {
+    browserKeyPair = await generateKeyPair()
+  } catch (e) {
+    throw new Error(`Key generation failed: ${e.name || e.message}`)
+  }
+
+  let sharedSecret
+  try {
+    sharedSecret = await deriveSharedSecret(browserKeyPair.privateKey, cliPubKey)
+  } catch (e) {
+    throw new Error(`Key exchange failed: ${e.name || e.message}`)
+  }
+
+  let aesKey
+  try {
+    aesKey = await deriveAesKey(sharedSecret, passphrase)
+  } catch (e) {
+    throw new Error(`Key derivation failed: ${e.name || e.message}`)
+  }
+
+  const { ciphertext, iv, tag } = await encrypt(aesKey, JSON.stringify(config))
+  const browserPub = await exportPublicKey(browserKeyPair.publicKey)
+
+  return submitResult(sessionId, browserPub, ciphertext, iv, tag)
+}
+
+/**
+ * Sends a skip request to the relay server.
+ */
+export async function skipSession(sessionId) {
+  return fetch(`/api/sessions/${sessionId}/skip`, { method: 'POST' })
 }
