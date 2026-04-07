@@ -1,11 +1,13 @@
 """Tests for encrypted config file management."""
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 from cryptography.exceptions import InvalidTag
 
 from mcp_relay_core.storage.config_file import (
+    _get_config_path,
     _with_retry,
     delete_config,
     export_config,
@@ -23,6 +25,18 @@ def _temp_config(tmp_path):
     set_config_path(config_path)
     yield tmp_path
     set_config_path(None)
+
+
+class TestConfigPath:
+    def test_get_config_path_default(self):
+        from mcp_relay_core.storage.config_file import _DEFAULT_CONFIG_PATH
+
+        set_config_path(None)
+        assert _get_config_path() == _DEFAULT_CONFIG_PATH
+
+    def test_get_config_path_override(self):
+        set_config_path("/tmp/test.enc")
+        assert _get_config_path() == Path("/tmp/test.enc")
 
 
 class TestWithRetry:
@@ -89,6 +103,14 @@ class TestWriteAndReadConfig:
     def test_returns_none_when_no_config_file_exists(self):
         config = read_config("anything")
         assert config is None
+
+    def test_read_config_corrupt_file_raises(self, _temp_config):
+        config_path = _temp_config / "config.enc"
+        config_path.write_bytes(b"not-encrypted-data-shorter-than-12-bytes")
+        with pytest.raises(Exception) as excinfo:
+            read_config("any")
+        # Ensure it is not a ValueError from unpacking
+        assert not isinstance(excinfo.value, ValueError)
 
 
 class TestWriteConfigMerging:
