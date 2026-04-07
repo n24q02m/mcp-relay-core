@@ -11,5 +11,10 @@
     "iv_hex": "000000000000000000000000",
     "ciphertext_hex": "05551b79cbc789816118be33e2efc3a3b02e31138ff2208047a8f84608b16efd48",
     "tag_hex": "77934b8180d5553644070a4e9031bde3"
+  },
+  "passphrase_kdf": {
+    "passphrase": "correct-horse-battery-staple",
+    "iterations": 600000,
+    "derived_key_hex": "245a7d6161fa76e9c3c86c3a3a8b70ddc1b2b8fcfd562cdc338c6009c47f417f"
   }
 }

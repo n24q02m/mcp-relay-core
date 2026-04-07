@@ -128,3 +128,9 @@ class TestPBKDF2Iterations:
         encrypted = encrypt_data(key_current, "secret")
         with pytest.raises(InvalidTag):
             decrypt_data(key_legacy, encrypted)
+
+    def test_passphrase_key_uses_default_iterations(self):
+        # Verify it uses the same as derive_passphrase_key(pass, PBKDF2_ITERATIONS)
+        key1 = derive_passphrase_key("secret")
+        key2 = derive_passphrase_key("secret", PBKDF2_ITERATIONS)
+        assert key1 == key2

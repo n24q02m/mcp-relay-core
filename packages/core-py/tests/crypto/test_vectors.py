@@ -9,6 +9,7 @@ from pathlib import Path
 
 from mcp_relay_core.crypto.aes import decrypt
 from mcp_relay_core.crypto.kdf import derive_aes_key
+from mcp_relay_core.storage.encryption import derive_passphrase_key
 
 VECTORS_PATH = Path(__file__).parent.parent / "fixtures" / "crypto-vectors.json"
 
@@ -66,3 +67,13 @@ class TestAESGCMVectors:
 
         plaintext = decrypt(key, ciphertext, iv, tag)
         assert plaintext == aes["plaintext"]
+
+
+class TestPassphraseKDFVectors:
+    def test_derives_expected_key(self):
+        vectors = _load_vectors()
+        pkdf = vectors["passphrase_kdf"]
+
+        derived = derive_passphrase_key(pkdf["passphrase"], pkdf["iterations"])
+
+        assert derived.hex() == pkdf["derived_key_hex"]

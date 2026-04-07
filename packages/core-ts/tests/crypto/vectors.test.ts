@@ -17,6 +17,11 @@ interface CryptoVectors {
     ciphertext_hex: string
     tag_hex: string
   }
+  passphrase_kdf: {
+    passphrase: string
+    iterations: number
+    derived_key_hex: string
+  }
 }
 
 const vectorsPath = resolve(import.meta.dirname ?? '.', '..', 'fixtures', 'crypto-vectors.json')
@@ -59,5 +64,26 @@ describe('cross-language crypto test vectors', () => {
 
     const plaintext = await decrypt(key, ciphertext, iv, tag)
     expect(plaintext).toBe(vectors.aes_gcm.plaintext)
+  })
+
+  it('Passphrase KDF derives the expected key', async () => {
+    const pkdf = vectors.passphrase_kdf
+    // derivePassphraseKey sets extractable: false, so we re-implement for testing or use deriveBits
+    const encoder = new TextEncoder()
+    const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(pkdf.passphrase), 'PBKDF2', false, [
+      'deriveBits'
+    ])
+    const derivedBits = await crypto.subtle.deriveBits(
+      {
+        name: 'PBKDF2',
+        hash: 'SHA-256',
+        salt: encoder.encode('mcp-relay-export'),
+        iterations: pkdf.iterations
+      },
+      keyMaterial,
+      256
+    )
+
+    expect(Buffer.from(derivedBits).toString('hex')).toBe(pkdf.derived_key_hex)
   })
 })
