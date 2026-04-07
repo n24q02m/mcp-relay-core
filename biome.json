@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.0.0/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.10/schema.json",
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "formatter": {
     "enabled": true,
@@ -16,6 +16,23 @@
   },
   "linter": {
     "enabled": true,
-    "rules": { "recommended": true }
-  }
+    "rules": {
+      "recommended": true,
+      "suspicious": {
+        "noConsole": "off"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["packages/relay-server/src/**/*.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "error"
+          }
+        }
+      }
+    }
+  ]
 }
