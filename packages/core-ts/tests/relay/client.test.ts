@@ -37,9 +37,13 @@ describe('generatePassphrase', () => {
 
   it('should only use words from the WORDLIST', () => {
     const wordSet = new Set(WORDLIST)
-    for (let i = 0; i < 20; i++) {
-      const words = generatePassphrase().split('-')
+    for (let i = 0; i < 100; i++) {
+      const passphrase = generatePassphrase()
+      const words = passphrase.split('-')
       for (const w of words) {
+        if (!wordSet.has(w)) {
+          console.error(`Word not in list: "${w}" (from passphrase: "${passphrase}")`)
+        }
         expect(wordSet.has(w)).toBe(true)
       }
     }
@@ -90,7 +94,7 @@ describe('createSession', () => {
     const session = await createSession('https://relay.example.com', 'test-server', mockSchema)
 
     expect(session.sessionId).toHaveLength(64) // 32 bytes hex
-    expect(session.passphrase).toMatch(/^\w+-\w+-\w+-\w+$/)
+    expect(session.passphrase).toMatch(/^[a-z]+(-[a-z]+)*-[a-z]+(-[a-z]+)*-[a-z]+(-[a-z]+)*-[a-z]+(-[a-z]+)*$/)
     expect(session.relayUrl).toContain('https://relay.example.com/setup?s=')
     expect(session.relayUrl).toContain('#k=')
     expect(session.relayUrl).toContain('&p=')

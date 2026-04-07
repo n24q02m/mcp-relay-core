@@ -2,8 +2,9 @@ const encoder = new TextEncoder()
 const decoder = new TextDecoder()
 
 const SALT = encoder.encode('mcp-relay-config')
-export const PBKDF2_ITERATIONS = 600_000
-export const LEGACY_PBKDF2_ITERATIONS = 100_000
+export const PBKDF2_ITERATIONS = 1_000_000
+export const LEGACY_PBKDF2_ITERATIONS = 600_000
+export const V1_LEGACY_PBKDF2_ITERATIONS = 100_000
 
 export async function deriveFileKey(
   machineId: string,

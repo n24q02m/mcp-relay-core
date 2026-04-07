@@ -5,7 +5,8 @@ import {
   derivePassphraseKey,
   encryptData,
   LEGACY_PBKDF2_ITERATIONS,
-  PBKDF2_ITERATIONS
+  PBKDF2_ITERATIONS,
+  V1_LEGACY_PBKDF2_ITERATIONS
 } from '../../src/storage/encryption.js'
 
 describe('deriveFileKey', () => {
@@ -92,23 +93,29 @@ describe('PBKDF2 iterations', () => {
   it('different iterations produce different keys', async () => {
     const keyCurrent = await deriveFileKey('m', 'u', PBKDF2_ITERATIONS)
     const keyLegacy = await deriveFileKey('m', 'u', LEGACY_PBKDF2_ITERATIONS)
+    const keyV1Legacy = await deriveFileKey('m', 'u', V1_LEGACY_PBKDF2_ITERATIONS)
 
     const encrypted = await encryptData(keyCurrent, 'secret')
     await expect(decryptData(keyLegacy, encrypted)).rejects.toThrow()
+    await expect(decryptData(keyV1Legacy, encrypted)).rejects.toThrow()
   })
 
-  it('legacy key can decrypt legacy-encrypted data', async () => {
-    const keyLegacy = await deriveFileKey('m', 'u', LEGACY_PBKDF2_ITERATIONS)
-    const encrypted = await encryptData(keyLegacy, 'migration test')
-    const decrypted = await decryptData(keyLegacy, encrypted)
-    expect(decrypted).toBe('migration test')
+  it('legacy keys can decrypt legacy-encrypted data', async () => {
+    for (const iterations of [LEGACY_PBKDF2_ITERATIONS, V1_LEGACY_PBKDF2_ITERATIONS]) {
+      const keyLegacy = await deriveFileKey('m', 'u', iterations)
+      const encrypted = await encryptData(keyLegacy, `migration test ${iterations}`)
+      const decrypted = await decryptData(keyLegacy, encrypted)
+      expect(decrypted).toBe(`migration test ${iterations}`)
+    }
   })
 
   it('passphrase key with different iterations produces different keys', async () => {
     const keyCurrent = await derivePassphraseKey('pass', PBKDF2_ITERATIONS)
     const keyLegacy = await derivePassphraseKey('pass', LEGACY_PBKDF2_ITERATIONS)
+    const keyV1Legacy = await derivePassphraseKey('pass', V1_LEGACY_PBKDF2_ITERATIONS)
 
     const encrypted = await encryptData(keyCurrent, 'secret')
     await expect(decryptData(keyLegacy, encrypted)).rejects.toThrow()
+    await expect(decryptData(keyV1Legacy, encrypted)).rejects.toThrow()
   })
 })

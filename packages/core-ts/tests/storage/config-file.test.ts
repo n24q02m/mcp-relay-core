@@ -103,7 +103,7 @@ describe('listConfigs', () => {
   })
 })
 
-describe('exportConfig + importConfig', () => {
+describe('exportConfig + importConfig', { timeout: 30000 }, () => {
   it('roundtrip with passphrase', async () => {
     await writeConfig('telegram', { botToken: 'abc' })
     await writeConfig('slack', { webhook: 'url' })

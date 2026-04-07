@@ -8,7 +8,8 @@ import {
   derivePassphraseKey,
   encryptData,
   LEGACY_PBKDF2_ITERATIONS,
-  PBKDF2_ITERATIONS
+  PBKDF2_ITERATIONS,
+  V1_LEGACY_PBKDF2_ITERATIONS
 } from './encryption.js'
 import { getMachineId, getUsername } from './machine-id.js'
 
@@ -66,16 +67,18 @@ async function loadStore(): Promise<ConfigStore> {
     const json = await decryptData(key, data)
     return JSON.parse(json) as ConfigStore
   } catch (err) {
-    try {
-      const legacyKey = await deriveFileKey(machineId, username, LEGACY_PBKDF2_ITERATIONS)
-      const json = await decryptData(legacyKey, data)
-      const store = JSON.parse(json) as ConfigStore
-      // Auto-migrate to current iterations
-      await saveStore(store)
-      return store
-    } catch {
-      throw err
+    // Try legacy iterations (600k, then 100k)
+    for (const iterations of [LEGACY_PBKDF2_ITERATIONS, V1_LEGACY_PBKDF2_ITERATIONS]) {
+      try {
+        const legacyKey = await deriveFileKey(machineId, username, iterations)
+        const json = await decryptData(legacyKey, data)
+        const store = JSON.parse(json) as ConfigStore
+        // Auto-migrate to current iterations
+        await saveStore(store)
+        return store
+      } catch {}
     }
+    throw err
   }
 }
 
@@ -127,20 +130,28 @@ export async function exportConfig(passphrase: string): Promise<Buffer> {
 }
 
 export async function importConfig(passphrase: string, data: Buffer): Promise<void> {
-  let json: string
+  let json: string | null = null
+  let lastErr: unknown
+
   try {
     const key = await derivePassphraseKey(passphrase, PBKDF2_ITERATIONS)
     json = await decryptData(key, data)
   } catch (err) {
-    try {
-      const legacyKey = await derivePassphraseKey(passphrase, LEGACY_PBKDF2_ITERATIONS)
-      json = await decryptData(legacyKey, data)
-    } catch {
-      throw err
+    lastErr = err
+    for (const iterations of [LEGACY_PBKDF2_ITERATIONS, V1_LEGACY_PBKDF2_ITERATIONS]) {
+      try {
+        const legacyKey = await derivePassphraseKey(passphrase, iterations)
+        json = await decryptData(legacyKey, data)
+        break
+      } catch {}
     }
   }
-  const imported = JSON.parse(json) as ConfigStore
 
+  if (json === null) {
+    throw lastErr
+  }
+
+  const imported = JSON.parse(json) as ConfigStore
   const store = await loadStore()
   // Merge imported servers into local config
   for (const [name, config] of Object.entries(imported.servers)) {
