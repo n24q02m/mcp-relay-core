@@ -83,3 +83,10 @@ class TestResolveConfig:
         result = resolve_config("telegram", ["bot_token"])
         assert result.source is None
         assert result.config is None
+
+    def test_returns_none_from_env_when_required_fields_empty(self):
+        # Even if env vars exist, it should return None if no fields are requested
+        os.environ["MCP_TELEGRAM_BOT_TOKEN"] = "env-token"
+        result = resolve_config("telegram", [])
+        assert result.source is None
+        assert result.config is None
