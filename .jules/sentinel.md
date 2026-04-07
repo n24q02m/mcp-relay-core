@@ -1,4 +1,5 @@
-## 2024-05-18 - Missing Security Headers in Relay Server API
-**Vulnerability:** The Express API (`packages/relay-server`) lacked essential HTTP security headers like `Content-Security-Policy`, `X-Content-Type-Options`, `X-Frame-Options`, and `Strict-Transport-Security`.
-**Learning:** Despite the unique zero-knowledge architecture (where sensitive data is encrypted by the client and not readable by the server), defense in depth remains important. Even opaque APIs could be subject to MIME sniffing or clickjacking if served without appropriate headers.
-**Prevention:** Always use the `helmet` package to apply a baseline set of security headers on Express servers, even those not directly serving HTML pages.
+## 2024-04-07 - Missing HTTP Error Validation in Fetch Calls
+
+**Vulnerability:** UI hang and lack of error feedback when API calls fail with HTTP error statuses (e.g., 500, 404).
+**Learning:** The JavaScript `fetch` API only throws an error on network failures (e.g., DNS, connection refused). It does not throw for HTTP error responses (4xx, 5xx). Code that assumes `fetch` will jump to the `catch` block on any non-successful response will leave the UI in an inconsistent state (e.g., buttons remaining disabled).
+**Prevention:** Always check `response.ok` or the specific `response.status` after a `fetch` call and explicitly throw an error or handle the failure case to ensure the UI can recover and inform the user.
