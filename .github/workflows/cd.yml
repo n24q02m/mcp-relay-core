@@ -42,16 +42,9 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Generate GitHub App Token
-        id: app-token
-        uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3
-        with:
-          app-id: ${{ vars.CI_APP_ID }}
-          private-key: ${{ secrets.CI_APP_KEY }}
-
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          token: ${{ steps.app-token.outputs.token }}
+          token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
 
       - uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4
@@ -62,15 +55,15 @@ jobs:
       - uses: python-semantic-release/python-semantic-release@350c48fcb3ffcdfd2e0a235206bc2ecea6b69df0 # v10
         id: release
         with:
-          github_token: ${{ steps.app-token.outputs.token }}
-          config_file: semantic-release.toml
+          github_token: ${{ secrets.GH_PAT }}
+          config_file: packages/core-py/semantic-release.toml
           prerelease: ${{ inputs.release_type == 'beta' }}
           prerelease_token: beta
 
       - uses: python-semantic-release/publish-action@310a9983a0ae878b29f3aac778d7c77c1db27378 # v10
         if: steps.release.outputs.released == 'true'
         with:
-          github_token: ${{ steps.app-token.outputs.token }}
+          github_token: ${{ secrets.GH_PAT }}
           tag: ${{ steps.release.outputs.tag }}
 
   # ============================================================================
@@ -152,10 +145,17 @@ jobs:
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
 
       - name: Build and publish
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
         run: |
           cd packages/core-py
           uv build
-          uv publish
+          VERSION=$(grep -m 1 "version =" pyproject.toml | cut -d '"' -f 2)
+          if curl -s https://pypi.org/pypi/mcp-relay-core/json | grep -q "\"$VERSION\""; then
+            echo "mcp-relay-core@$VERSION already published, skipping"
+          else
+            uv publish
+          fi
 
   # ============================================================================
   # Build Docker (relay-server only)
@@ -295,16 +295,9 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Generate GitHub App Token
-        id: app-token
-        uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3
-        with:
-          app-id: ${{ vars.CI_APP_ID }}
-          private-key: ${{ secrets.CI_APP_KEY }}
-
       - name: Dispatch core-update
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           gh api repos/n24q02m/n24q02m/dispatches \
             -f event_type=core-update \
