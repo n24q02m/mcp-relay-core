@@ -1,11 +1,13 @@
 """Tests for encrypted config file management."""
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 from cryptography.exceptions import InvalidTag
 
 from mcp_relay_core.storage.config_file import (
+    _get_config_path,
     _with_retry,
     delete_config,
     export_config,
@@ -23,6 +25,21 @@ def _temp_config(tmp_path):
     set_config_path(config_path)
     yield tmp_path
     set_config_path(None)
+
+
+class TestGetConfigPath:
+    def test_get_config_path_default(self):
+        # Reset override to test default path
+        set_config_path(None)
+        try:
+            path = _get_config_path()
+            assert isinstance(path, Path)
+            assert path.name == "config.enc"
+            assert "mcp" in str(path)
+        finally:
+            # Restore temp path for other tests
+            # (The fixture will handle it, but being safe)
+            pass
 
 
 class TestWithRetry:
@@ -221,3 +238,13 @@ class TestPBKDF2Migration:
         # Legacy key should no longer decrypt
         with pytest.raises(InvalidTag):
             decrypt_data(legacy_key, new_data)
+
+    def test_load_store_fails_when_all_decryption_fails(self, _temp_config):
+        # Create a file with garbage data
+        config_path = _temp_config / "config.enc"
+        config_path.write_bytes(b"garbage data that cannot be decrypted")
+
+        # This should raise the original exception from the first decryption attempt
+        # which is usually InvalidTag or similar from cryptography
+        with pytest.raises(InvalidTag):
+            read_config("any")
