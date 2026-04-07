@@ -187,7 +187,7 @@ class TestExportImportConfig:
 
 
 class TestPBKDF2Migration:
-    def test_auto_migrates_legacy_config(self, _temp_config):
+    def test_auto_migrates_legacy_600k_config(self, _temp_config):
         import json
 
         from mcp_relay_core.storage.encryption import (
@@ -221,3 +221,34 @@ class TestPBKDF2Migration:
         # Legacy key should no longer decrypt
         with pytest.raises(InvalidTag):
             decrypt_data(legacy_key, new_data)
+
+    def test_auto_migrates_v1_legacy_100k_config(self, _temp_config):
+        import json
+
+        from mcp_relay_core.storage.encryption import (
+            PBKDF2_ITERATIONS,
+            V1_LEGACY_PBKDF2_ITERATIONS,
+            decrypt_data,
+            derive_file_key,
+            encrypt_data,
+        )
+        from mcp_relay_core.storage.machine_id import get_machine_id, get_username
+
+        machine_id = get_machine_id()
+        username = get_username()
+        v1_key = derive_file_key(machine_id, username, V1_LEGACY_PBKDF2_ITERATIONS)
+        store = {"version": 1, "servers": {"v1": {"key": "value100"}}}
+        encrypted = encrypt_data(v1_key, json.dumps(store))
+
+        config_path = _temp_config / "config.enc"
+        config_path.write_bytes(encrypted)
+
+        # Reading should trigger auto-migration
+        config = read_config("v1")
+        assert config == {"key": "value100"}
+
+        # Verify file is now encrypted with current iterations (1M)
+        new_data = config_path.read_bytes()
+        current_key = derive_file_key(machine_id, username, PBKDF2_ITERATIONS)
+        decrypted = decrypt_data(current_key, new_data)
+        assert json.loads(decrypted) == store

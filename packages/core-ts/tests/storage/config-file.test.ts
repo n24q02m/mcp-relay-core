@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -11,6 +12,13 @@ import {
   setConfigPath,
   writeConfig
 } from '../../src/storage/config-file.js'
+import {
+  deriveFileKey,
+  encryptData,
+  LEGACY_PBKDF2_ITERATIONS,
+  V1_LEGACY_PBKDF2_ITERATIONS
+} from '../../src/storage/encryption.js'
+import { getMachineId, getUsername } from '../../src/storage/machine-id.js'
 
 let tempDir: string
 
@@ -146,3 +154,55 @@ describe('exportConfig + importConfig', () => {
     expect(await readConfig('remote-server')).toEqual({ key: 'remote-val' })
   })
 })
+
+describe('Migration from legacy iterations', () => {
+  it('automatically migrates from 600k iterations to 1M', async () => {
+    const configPath = join(tempDir, 'config.enc')
+    const [machineId, username] = await Promise.all([getMachineId(), getUsername()])
+    const store = { version: 1, servers: { legacy: { key: 'val600' } } }
+
+    // Encrypt with 600k
+    const key600 = await deriveFileKey(machineId, username, LEGACY_PBKDF2_ITERATIONS)
+    const encrypted = await encryptData(key600, JSON.stringify(store))
+    writeFileSync(configPath, encrypted)
+
+    // Read should trigger migration
+    const config = await readConfig('legacy')
+    expect(config).toEqual({ key: 'val600' })
+
+    // Verify file is now encrypted with 1M (can't be decrypted by 600k anymore)
+    const data = await (await import('node:fs/promises')).readFile(configPath)
+    await expect(decryptData(key600, data)).rejects.toThrow()
+
+    const key1M = await deriveFileKey(machineId, username)
+    const decrypted = await decryptData(key1M, data)
+    expect(JSON.parse(decrypted)).toEqual(store)
+  })
+
+  it('automatically migrates from 100k iterations to 1M', async () => {
+    const configPath = join(tempDir, 'config.enc')
+    const [machineId, username] = await Promise.all([getMachineId(), getUsername()])
+    const store = { version: 1, servers: { v1: { key: 'val100' } } }
+
+    // Encrypt with 100k
+    const key100 = await deriveFileKey(machineId, username, V1_LEGACY_PBKDF2_ITERATIONS)
+    const encrypted = await encryptData(key100, JSON.stringify(store))
+    writeFileSync(configPath, encrypted)
+
+    // Read should trigger migration
+    const config = await readConfig('v1')
+    expect(config).toEqual({ key: 'val100' })
+
+    // Verify file is now encrypted with 1M
+    const data = await (await import('node:fs/promises')).readFile(configPath)
+    const key1M = await deriveFileKey(machineId, username)
+    const decrypted = await decryptData(key1M, data)
+    expect(JSON.parse(decrypted)).toEqual(store)
+  })
+})
+
+// Helper for decryption verification
+async function decryptData(key: CryptoKey, data: Buffer): Promise<string> {
+  const { decryptData: decrypt } = await import('../../src/storage/encryption.js')
+  return decrypt(key, data)
+}

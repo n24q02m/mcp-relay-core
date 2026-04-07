@@ -8,7 +8,8 @@ import {
   derivePassphraseKey,
   encryptData,
   LEGACY_PBKDF2_ITERATIONS,
-  PBKDF2_ITERATIONS
+  PBKDF2_ITERATIONS,
+  V1_LEGACY_PBKDF2_ITERATIONS
 } from './encryption.js'
 import { getMachineId, getUsername } from './machine-id.js'
 
@@ -61,11 +62,13 @@ async function loadStore(): Promise<ConfigStore> {
   const [machineId, username] = await Promise.all([getMachineId(), getUsername()])
   const data = await readFile(configPath)
 
+  // Try current iterations (1M)
   try {
     const key = await deriveFileKey(machineId, username, PBKDF2_ITERATIONS)
     const json = await decryptData(key, data)
     return JSON.parse(json) as ConfigStore
-  } catch (err) {
+  } catch {
+    // Fallback to legacy (600k)
     try {
       const legacyKey = await deriveFileKey(machineId, username, LEGACY_PBKDF2_ITERATIONS)
       const json = await decryptData(legacyKey, data)
@@ -74,7 +77,12 @@ async function loadStore(): Promise<ConfigStore> {
       await saveStore(store)
       return store
     } catch {
-      throw err
+      const v1Key = await deriveFileKey(machineId, username, V1_LEGACY_PBKDF2_ITERATIONS)
+      const json = await decryptData(v1Key, data)
+      const store = JSON.parse(json) as ConfigStore
+      // Auto-migrate to current iterations
+      await saveStore(store)
+      return store
     }
   }
 }
@@ -129,14 +137,18 @@ export async function exportConfig(passphrase: string): Promise<Buffer> {
 export async function importConfig(passphrase: string, data: Buffer): Promise<void> {
   let json: string
   try {
+    // Try current iterations (1M)
     const key = await derivePassphraseKey(passphrase, PBKDF2_ITERATIONS)
     json = await decryptData(key, data)
-  } catch (err) {
+  } catch {
     try {
+      // Fallback to legacy (600k)
       const legacyKey = await derivePassphraseKey(passphrase, LEGACY_PBKDF2_ITERATIONS)
       json = await decryptData(legacyKey, data)
     } catch {
-      throw err
+      // Fallback to V1 legacy (100k)
+      const v1Key = await derivePassphraseKey(passphrase, V1_LEGACY_PBKDF2_ITERATIONS)
+      json = await decryptData(v1Key, data)
     }
   }
   const imported = JSON.parse(json) as ConfigStore

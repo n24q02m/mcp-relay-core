@@ -11,8 +11,9 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 _SALT = b"mcp-relay-config"
 _EXPORT_SALT = b"mcp-relay-export"
-PBKDF2_ITERATIONS = 600_000
-LEGACY_PBKDF2_ITERATIONS = 100_000
+PBKDF2_ITERATIONS = 1_000_000
+LEGACY_PBKDF2_ITERATIONS = 600_000
+V1_LEGACY_PBKDF2_ITERATIONS = 100_000
 
 
 def derive_file_key(
