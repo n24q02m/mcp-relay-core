@@ -53,7 +53,7 @@ docker run -p 3000:8080 mcp-relay-server
 ## Security properties
 
 - Zero-knowledge: server never sees plaintext credentials
-- Sessions: 10-minute TTL, one-shot consumption, max 5 per IP
+- Sessions: 10-minute TTL, one-shot consumption, max 10 per IP
 - Rate-limited API routes
 
 ## Documentation
