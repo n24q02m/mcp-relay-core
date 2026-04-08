@@ -2,11 +2,11 @@
  * Cross-platform browser opening with WSL detection.
  */
 
-import { exec } from 'node:child_process'
+import { execFile } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import { promisify } from 'node:util'
 
-const execAsync = promisify(exec)
+const execFileAsync = promisify(execFile)
 
 async function isWsl(): Promise<boolean> {
   try {
@@ -21,16 +21,15 @@ async function isWsl(): Promise<boolean> {
 async function openInWsl(url: string): Promise<boolean> {
   // Try wslview first (from wslu package, commonly available)
   try {
-    await execAsync(`wslview ${JSON.stringify(url)}`)
+    await execFileAsync('wslview', [url])
     return true
   } catch {
     /* fall through */
   }
 
-  // Fallback to cmd.exe /c start
+  // Fallback to rundll32.exe (secure alternative to cmd.exe /c start)
   try {
-    const escapedUrl = url.replace(/&/g, '^&')
-    await execAsync(`cmd.exe /c start ${JSON.stringify(escapedUrl)}`)
+    await execFileAsync('rundll32.exe', ['url.dll,FileProtocolHandler', url])
     return true
   } catch {
     /* fall through */
@@ -43,7 +42,7 @@ async function openInWsl(url: string): Promise<boolean> {
  * Try to open URL in default browser. Returns true if likely succeeded.
  *
  * Detection order:
- * 1. win32: `start` command
+ * 1. win32: `rundll32.exe url.dll,FileProtocolHandler`
  * 2. darwin: `open` command
  * 3. linux: check WSL then `xdg-open`
  *
@@ -51,21 +50,20 @@ async function openInWsl(url: string): Promise<boolean> {
  */
 export async function tryOpenBrowser(url: string): Promise<boolean> {
   try {
-    // Validate URL to prevent shell injection
+    // Validate URL schema as a defense-in-depth measure
     if (!/^https?:\/\//i.test(url)) {
       return false
     }
 
     const platform = process.platform
-    const quotedUrl = JSON.stringify(url)
 
     if (platform === 'win32') {
-      await execAsync(`start "" ${quotedUrl}`)
+      await execFileAsync('rundll32.exe', ['url.dll,FileProtocolHandler', url])
       return true
     }
 
     if (platform === 'darwin') {
-      await execAsync(`open ${quotedUrl}`)
+      await execFileAsync('open', [url])
       return true
     }
 
@@ -76,7 +74,7 @@ export async function tryOpenBrowser(url: string): Promise<boolean> {
       // Fall through to xdg-open
     }
 
-    await execAsync(`xdg-open ${quotedUrl}`)
+    await execFileAsync('xdg-open', [url])
     return true
   } catch {
     return false
