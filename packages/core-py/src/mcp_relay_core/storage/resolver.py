@@ -23,7 +23,7 @@ class ResolvedConfig:
         self.source = source
 
 
-def resolve_config(
+async def resolve_config(
     server_name: str,
     required_fields: list[str],
     defaults: dict[str, str] | None = None,
@@ -63,7 +63,7 @@ def resolve_config(
         return ResolvedConfig(config=env_config, source="env")
 
     # 2. Check config file
-    file_config = read_config(server_name)
+    file_config = await read_config(server_name)
     if file_config is not None:
         has_all = all(
             f in file_config and file_config[f] != "" for f in required_fields

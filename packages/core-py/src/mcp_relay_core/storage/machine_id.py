@@ -25,8 +25,9 @@ def get_machine_id() -> str:
     system = platform.system()
     try:
         if system == "Linux":
-            with open("/etc/machine-id") as f:
-                return f.read().strip()
+            if os.path.exists("/etc/machine-id"):
+                with open("/etc/machine-id") as f:
+                    return f.read().strip()
 
         if system == "Darwin":
             result = subprocess.run(
@@ -34,12 +35,15 @@ def get_machine_id() -> str:
                 capture_output=True,
                 text=True,
                 timeout=5,
+                check=False,
             )
             match = re.search(r'"IOPlatformUUID"\s*=\s*"([^"]+)"', result.stdout)
             if match:
                 return match.group(1)
 
         if system == "Windows":
+            # Use full path for reg.exe to be safe, or rely on path.
+            # check=False to avoid raising CalledProcessError which we handle via Exception
             result = subprocess.run(
                 [
                     "reg",
@@ -51,6 +55,7 @@ def get_machine_id() -> str:
                 capture_output=True,
                 text=True,
                 timeout=5,
+                check=False,
             )
             match = re.search(r"MachineGuid\s+REG_SZ\s+(\S+)", result.stdout)
             if match:
