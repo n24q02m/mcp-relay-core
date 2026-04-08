@@ -1,6 +1,11 @@
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+
+// Ensure we test the default of 30, even if other tests polluted process.env
+process.env.RATE_LIMIT_MUTATION = '30'
+process.env.RATE_LIMIT_WINDOW_MS = '60000'
+
 import { createApp } from '../src/app.js'
 import { clearAllSessions } from '../src/store.js'
 

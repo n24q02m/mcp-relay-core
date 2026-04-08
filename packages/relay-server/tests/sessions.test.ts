@@ -1,6 +1,11 @@
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+
+// Set higher limits so sessions.test.ts doesn't randomly hit the 30/min mutation limit
+process.env.RATE_LIMIT_MUTATION = '100'
+process.env.RATE_LIMIT_WINDOW_MS = '60000'
+
 import { createApp } from '../src/app.js'
 import { clearAllSessions } from '../src/store.js'
 
@@ -21,6 +26,7 @@ beforeAll(async () => {
 
 afterEach(() => {
   clearAllSessions()
+  delete process.env.TRUST_PROXY
 })
 
 afterAll(async () => {
