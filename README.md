@@ -47,7 +47,7 @@ mise run setup
 ## Security Properties
 
 - Relay server is zero-knowledge (never sees plaintext)
-- Sessions: 10-minute TTL, one-shot consumption, max 5 per IP
+- Sessions: 10-minute TTL, one-shot consumption, max 10 per IP
 - Config file encrypted at rest with machine-bound key (PBKDF2)
 - Passphrase: 4-word Diceware (~52 bits entropy)
 
