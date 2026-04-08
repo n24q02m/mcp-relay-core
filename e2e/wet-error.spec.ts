@@ -1,11 +1,8 @@
-import { test, expect } from '@playwright/test'
 import { resolve } from 'node:path'
-import { startLocalRelay } from '../packages/relay-server/src/local.ts'
-import {
-  generateKeyPair,
-  exportPublicKey,
-} from '../packages/core-ts/src/crypto/ecdh.ts'
+import { expect, test } from '@playwright/test'
+import { exportPublicKey, generateKeyPair } from '../packages/core-ts/src/crypto/ecdh.ts'
 import { generatePassphrase } from '../packages/core-ts/src/relay/client.ts'
+import { startLocalRelay } from '../packages/relay-server/src/local.ts'
 
 const rootDir = resolve(process.cwd())
 const pagesDir = resolve(rootDir, 'pages')
@@ -37,7 +34,7 @@ test.describe('Wet Form Skip Error Handling', () => {
         schema: {
           fields: [{ key: 'API_KEY', label: 'API Key', type: 'password' }]
         }
-      }),
+      })
     })
     expect(createRes.status).toBe(201)
 
@@ -50,7 +47,7 @@ test.describe('Wet Form Skip Error Handling', () => {
       await route.fulfill({
         status: 500,
         contentType: 'application/json',
-        body: JSON.stringify({ error: 'Internal Server Error' }),
+        body: JSON.stringify({ error: 'Internal Server Error' })
       })
     })
 
