@@ -2,7 +2,11 @@
 
 import pytest
 
-from mcp_relay_core.storage.config_file import read_config, set_config_path, write_config
+from mcp_relay_core.storage.config_file import (
+    read_config,
+    set_config_path,
+    write_config,
+)
 from mcp_relay_core.storage.mode import clear_mode, get_mode, set_local_mode
 
 
@@ -33,12 +37,15 @@ class TestMode:
     async def test_configured_priority_over_local(self):
         # Even if _mode: local is there, if other keys exist, it's "configured"
         await write_config(
-            "test-server", {"_mode": "local", "api_key": "key123", "base_url": "https://api"}
+            "test-server",
+            {"_mode": "local", "api_key": "key123", "base_url": "https://api"},
         )
         assert await get_mode("test-server") == "configured"
 
     async def test_other_mode_values_count_as_configured(self):
-        await write_config("test-server", {"_mode": "something-else", "api_key": "key123"})
+        await write_config(
+            "test-server", {"_mode": "something-else", "api_key": "key123"}
+        )
         assert await get_mode("test-server") == "configured"
 
         # Even with ONLY an unknown mode value, it's configured (unexpected state)

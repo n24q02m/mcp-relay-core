@@ -1,7 +1,6 @@
 """Tests for config resolution."""
 
 import os
-import re
 from unittest.mock import patch
 
 import pytest
@@ -30,15 +29,22 @@ class TestResolveConfig:
             assert result.config == {"bot_token": "env-token", "chat_id": "env-chat"}
 
     async def test_env_vars_priority_over_file(self):
-        await write_config("telegram", {"bot_token": "file-token", "chat_id": "file-chat"})
-        env = {"MCP_TELEGRAM_BOT_TOKEN": "env-token", "MCP_TELEGRAM_CHAT_ID": "env-chat"}
+        await write_config(
+            "telegram", {"bot_token": "file-token", "chat_id": "file-chat"}
+        )
+        env = {
+            "MCP_TELEGRAM_BOT_TOKEN": "env-token",
+            "MCP_TELEGRAM_CHAT_ID": "env-chat",
+        }
         with patch.dict(os.environ, env):
             result = await resolve_config("telegram", ["bot_token", "chat_id"])
             assert result.source == "env"
             assert result.config["bot_token"] == "env-token"
 
     async def test_resolves_from_file_if_env_incomplete(self):
-        await write_config("telegram", {"bot_token": "file-token", "chat_id": "file-chat"})
+        await write_config(
+            "telegram", {"bot_token": "file-token", "chat_id": "file-chat"}
+        )
         # Only one env var present
         env = {"MCP_TELEGRAM_BOT_TOKEN": "env-token"}
         with patch.dict(os.environ, env):

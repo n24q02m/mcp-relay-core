@@ -1,6 +1,5 @@
 """Tests for encrypted config file management."""
 
-import asyncio
 from unittest.mock import MagicMock, patch
 
 import pytest
