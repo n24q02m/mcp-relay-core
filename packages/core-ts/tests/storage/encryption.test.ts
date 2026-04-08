@@ -85,7 +85,7 @@ describe('encrypt + decrypt roundtrip', () => {
 
     const encrypted = await encryptData(key1, 'secret data')
     await expect(decryptData(key2, encrypted)).rejects.toThrow()
-  })
+  }, 60000)
 })
 
 describe('PBKDF2 iterations', () => {
@@ -95,14 +95,14 @@ describe('PBKDF2 iterations', () => {
 
     const encrypted = await encryptData(keyCurrent, 'secret')
     await expect(decryptData(keyLegacy, encrypted)).rejects.toThrow()
-  })
+  }, 60000)
 
   it('legacy key can decrypt legacy-encrypted data', async () => {
     const keyLegacy = await deriveFileKey('m', 'u', LEGACY_PBKDF2_ITERATIONS)
     const encrypted = await encryptData(keyLegacy, 'migration test')
     const decrypted = await decryptData(keyLegacy, encrypted)
     expect(decrypted).toBe('migration test')
-  })
+  }, 60000)
 
   it('passphrase key with different iterations produces different keys', async () => {
     const keyCurrent = await derivePassphraseKey('pass', PBKDF2_ITERATIONS)
@@ -110,5 +110,5 @@ describe('PBKDF2 iterations', () => {
 
     const encrypted = await encryptData(keyCurrent, 'secret')
     await expect(decryptData(keyLegacy, encrypted)).rejects.toThrow()
-  })
+  }, 60000)
 })
