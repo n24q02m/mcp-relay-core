@@ -95,9 +95,9 @@ class TestWithRetry:
 
 class TestWriteAndReadConfig:
     def test_writes_and_reads_a_server_config(self):
-        write_config("telegram", {"botToken": "abc123", "chatId": "456"})
+        write_config("telegram", {"token": "t-123", "chat_id": "c-456"})
         config = read_config("telegram")
-        assert config == {"botToken": "abc123", "chatId": "456"}
+        assert config == {"token": "t-123", "chat_id": "c-456"}
 
     def test_returns_none_for_non_existent_server(self):
         config = read_config("nonexistent")
@@ -110,25 +110,25 @@ class TestWriteAndReadConfig:
 
 class TestWriteConfigMerging:
     def test_does_not_overwrite_other_servers(self):
-        write_config("telegram", {"botToken": "tok1"})
+        write_config("telegram", {"token": "t-1"})
         write_config("slack", {"webhook": "https://example.com"})
 
         telegram = read_config("telegram")
         slack = read_config("slack")
-        assert telegram == {"botToken": "tok1"}
+        assert telegram == {"token": "t-1"}
         assert slack == {"webhook": "https://example.com"}
 
     def test_overwrites_same_server_on_second_write(self):
-        write_config("telegram", {"botToken": "old"})
-        write_config("telegram", {"botToken": "new", "extra": "field"})
+        write_config("telegram", {"token": "old"})
+        write_config("telegram", {"token": "new", "extra": "field"})
 
         config = read_config("telegram")
-        assert config == {"botToken": "new", "extra": "field"}
+        assert config == {"token": "new", "extra": "field"}
 
 
 class TestDeleteConfig:
     def test_removes_a_server_section(self):
-        write_config("telegram", {"botToken": "tok"})
+        write_config("telegram", {"token": "t-1"})
         write_config("slack", {"webhook": "url"})
 
         delete_config("telegram")
@@ -137,15 +137,15 @@ class TestDeleteConfig:
         assert read_config("slack") == {"webhook": "url"}
 
     def test_deletes_file_when_last_server_removed(self, _temp_config):
-        write_config("telegram", {"botToken": "tok"})
+        write_config("telegram", {"token": "t-1"})
         delete_config("telegram")
 
         assert not (_temp_config / "config.enc").exists()
 
     def test_no_op_for_non_existent_server(self):
-        write_config("telegram", {"botToken": "tok"})
+        write_config("telegram", {"token": "t-1"})
         delete_config("nonexistent")
-        assert read_config("telegram") == {"botToken": "tok"}
+        assert read_config("telegram") == {"token": "t-1"}
 
 
 class TestListConfigs:
@@ -163,7 +163,7 @@ class TestListConfigs:
 
 class TestExportImportConfig:
     def test_roundtrip_with_passphrase(self):
-        write_config("telegram", {"botToken": "abc"})
+        write_config("telegram", {"token": "t-abc"})
         write_config("slack", {"webhook": "url"})
 
         exported = export_config("my-secret-passphrase")
@@ -176,11 +176,11 @@ class TestExportImportConfig:
 
         # Import back
         import_config("my-secret-passphrase", exported)
-        assert read_config("telegram") == {"botToken": "abc"}
+        assert read_config("telegram") == {"token": "t-abc"}
         assert read_config("slack") == {"webhook": "url"}
 
     def test_wrong_passphrase_fails_to_import(self):
-        write_config("telegram", {"botToken": "abc"})
+        write_config("telegram", {"token": "t-abc"})
         exported = export_config("correct-pass")
 
         with pytest.raises(InvalidTag):
