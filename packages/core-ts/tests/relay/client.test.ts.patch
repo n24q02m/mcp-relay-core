@@ -1,0 +1,9 @@
+<<<<<<< SEARCH
+    expect(session.sessionId).toHaveLength(64) // 32 bytes hex
+    expect(session.passphrase).toMatch(/^\w+-\w+-\w+-\w+$/)
+    expect(session.relayUrl).toContain('https://relay.example.com/setup?s=')
+=======
+    expect(session.sessionId).toHaveLength(64) // 32 bytes hex
+    expect(session.passphrase).toMatch(/^[\w-]+-[\w-]+-[\w-]+-[\w-]+$/)
+    expect(session.relayUrl).toContain('https://relay.example.com/setup?s=')
+>>>>>>> REPLACE
