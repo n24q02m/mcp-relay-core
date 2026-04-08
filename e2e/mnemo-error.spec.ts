@@ -1,8 +1,8 @@
-import { test, expect } from '@playwright/test'
 import { resolve } from 'node:path'
-import { startLocalRelay } from '../packages/relay-server/src/local.ts'
+import { expect, test } from '@playwright/test'
 import { exportPublicKey, generateKeyPair } from '../packages/core-ts/src/crypto/ecdh.ts'
 import { generatePassphrase } from '../packages/core-ts/src/relay/client.ts'
+import { startLocalRelay } from '../packages/relay-server/src/local.ts'
 
 const rootDir = resolve(process.cwd())
 const pagesDir = resolve(rootDir, 'pages')
@@ -27,15 +27,13 @@ test.describe('Mnemo Form Error Handling', () => {
 
     // 2. Create session on relay with a schema that has some fields
     const schema = {
-      fields: [
-        { key: 'API_KEY', label: 'API Key', type: 'password', required: true }
-      ]
+      fields: [{ key: 'API_KEY', label: 'API Key', type: 'password', required: true }]
     }
 
     const createRes = await fetch(`${relay.url}/api/sessions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId, serverName: 'mnemo-test', schema }),
+      body: JSON.stringify({ sessionId, serverName: 'mnemo-test', schema })
     })
     expect(createRes.status).toBe(201)
 
@@ -48,7 +46,7 @@ test.describe('Mnemo Form Error Handling', () => {
       await route.fulfill({
         status: 500,
         contentType: 'application/json',
-        body: JSON.stringify({ error: 'Server Error' }),
+        body: JSON.stringify({ error: 'Server Error' })
       })
     })
 

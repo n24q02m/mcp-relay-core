@@ -1,13 +1,13 @@
-import { parseFragment, getSessionId, submitResult } from '/shared/relay-client.js'
 import {
-  importPublicKey,
-  generateKeyPair,
-  deriveSharedSecret,
   deriveAesKey,
+  deriveSharedSecret,
   encrypt,
   exportPublicKey,
+  generateKeyPair,
+  importPublicKey
 } from '/shared/crypto.js'
-import { renderFields, renderCapabilityInfo, showStatus, startMessagePolling } from '/shared/ui.js'
+import { getSessionId, parseFragment, submitResult } from '/shared/relay-client.js'
+import { renderCapabilityInfo, renderFields, showStatus, startMessagePolling } from '/shared/ui.js'
 
 const { publicKey: cliPubKeyB64, passphrase } = parseFragment()
 const sessionId = getSessionId()
@@ -48,20 +48,32 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
       }
 
       let cliPubKey
-      try { cliPubKey = await importPublicKey(cliPubKeyB64) }
-      catch (e) { throw new Error(`Key import failed (len=${cliPubKeyB64?.length}): ${e.name || e.message}`) }
+      try {
+        cliPubKey = await importPublicKey(cliPubKeyB64)
+      } catch (e) {
+        throw new Error(`Key import failed (len=${cliPubKeyB64?.length}): ${e.name || e.message}`)
+      }
 
       let browserKeyPair
-      try { browserKeyPair = await generateKeyPair() }
-      catch (e) { throw new Error(`Key generation failed: ${e.name || e.message}`) }
+      try {
+        browserKeyPair = await generateKeyPair()
+      } catch (e) {
+        throw new Error(`Key generation failed: ${e.name || e.message}`)
+      }
 
       let sharedSecret
-      try { sharedSecret = await deriveSharedSecret(browserKeyPair.privateKey, cliPubKey) }
-      catch (e) { throw new Error(`Key exchange failed: ${e.name || e.message}`) }
+      try {
+        sharedSecret = await deriveSharedSecret(browserKeyPair.privateKey, cliPubKey)
+      } catch (e) {
+        throw new Error(`Key exchange failed: ${e.name || e.message}`)
+      }
 
       let aesKey
-      try { aesKey = await deriveAesKey(sharedSecret, passphrase) }
-      catch (e) { throw new Error(`Key derivation failed: ${e.name || e.message}`) }
+      try {
+        aesKey = await deriveAesKey(sharedSecret, passphrase)
+      } catch (e) {
+        throw new Error(`Key derivation failed: ${e.name || e.message}`)
+      }
 
       const { ciphertext, iv, tag } = await encrypt(aesKey, JSON.stringify(config))
       const browserPub = await exportPublicKey(browserKeyPair.publicKey)
@@ -88,7 +100,8 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
   const skipBtn = document.createElement('button')
   skipBtn.type = 'button'
   skipBtn.textContent = 'Skip (use local mode)'
-  skipBtn.style.cssText = 'background: transparent; color: #888; border: 1px solid #ccc; border-radius: 4px; padding: 8px 16px; cursor: pointer; width: 100%; margin-top: 8px;'
+  skipBtn.style.cssText =
+    'background: transparent; color: #888; border: 1px solid #ccc; border-radius: 4px; padding: 8px 16px; cursor: pointer; width: 100%; margin-top: 8px;'
   skipBtn.addEventListener('click', async () => {
     skipBtn.disabled = true
     skipBtn.textContent = 'Skipping...'
@@ -98,7 +111,7 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
         showStatus(document.getElementById('status-container'), 'Setup skipped. Using local ONNX models.', 'info')
         document.getElementById('setup-form').style.display = 'none'
       }
-    } catch (err) {
+    } catch (_err) {
       skipBtn.disabled = false
       skipBtn.textContent = 'Skip (use local mode)'
     }
