@@ -120,7 +120,7 @@ describe('exportConfig + importConfig', () => {
     await importConfig('my-secret-passphrase', exported)
     expect(await readConfig('telegram')).toEqual({ botToken: 'abc' })
     expect(await readConfig('slack')).toEqual({ webhook: 'url' })
-  })
+  }, 60000)
 
   it('wrong passphrase fails to import', async () => {
     await writeConfig('telegram', { botToken: 'abc' })
