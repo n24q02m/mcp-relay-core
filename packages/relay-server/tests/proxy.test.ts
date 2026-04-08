@@ -1,6 +1,6 @@
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { createApp } from '../src/app.js'
 import { clearAllSessions } from '../src/store.js'
 
@@ -12,7 +12,7 @@ describe('Proxy IP Resolution', () => {
     const app = createApp()
     server = createServer(app)
     return new Promise<string>((resolve) => {
-      server.listen(0, () => {
+      server.listen(0, '127.0.0.1', () => {
         const addr = server.address() as AddressInfo
         resolve(`http://127.0.0.1:${addr.port}`)
       })
@@ -20,37 +20,30 @@ describe('Proxy IP Resolution', () => {
   }
 
   afterEach(async () => {
-    vi.unstubAllEnvs()
+    delete process.env.TRUST_PROXY
     clearAllSessions()
     if (server) {
       await new Promise<void>((resolve) => server.close(() => resolve()))
     }
   })
 
-  it('uses TRUST_PROXY env var to resolve client IP', async () => {
-    // Currently app.ts has hardcoded app.set('trust proxy', 1)
-    // We want to verify we can change it to trust more hops
-
-    vi.stubEnv('TRUST_PROXY', '2')
+  it('uses TRUST_PROXY env var to resolve client IP (number)', async () => {
+    process.env.TRUST_PROXY = '2'
     baseUrl = await startServer()
 
-    // With trust proxy = 2, and X-Forwarded-For: 1.2.3.4, 5.6.7.8, 9.9.9.9
-    // Express should pick 5.6.7.8 (2nd from the right)
-
-    // Fill up quota for 5.6.7.8
+    // Fill up quota for 5.6.7.8 (2nd from the right)
     for (let i = 0; i < 10; i++) {
       const res = await fetch(`${baseUrl}/api/sessions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Forwarded-For': '1.2.3.4, 5.6.7.8, 127.0.0.1' // 127.0.0.1 is the immediate peer (server.listen(0))
+          'X-Forwarded-For': '1.2.3.4, 5.6.7.8, 127.0.0.1'
         },
         body: JSON.stringify({ sessionId: `s1-${i}`, serverName: 'test' })
       })
       expect(res.status).toBe(201)
     }
 
-    // This should fail because it resolves to the same IP (5.6.7.8)
     const resFail = await fetch(`${baseUrl}/api/sessions`, {
       method: 'POST',
       headers: {
@@ -60,25 +53,40 @@ describe('Proxy IP Resolution', () => {
       body: JSON.stringify({ sessionId: 's1-fail', serverName: 'test' })
     })
     expect(resFail.status).toBe(429)
+  })
 
-    // This should succeed because it resolves to a different IP (1.2.3.4)
-    const resSuccess = await fetch(`${baseUrl}/api/sessions`, {
+  it('uses TRUST_PROXY env var to resolve client IP (list)', async () => {
+    process.env.TRUST_PROXY = '127.0.0.1, 10.0.0.1'
+    baseUrl = await startServer()
+
+    // X-Forwarded-For: 1.2.3.4, 10.0.0.1
+    // Express trusts 127.0.0.1 (direct) and 10.0.0.1 (listed), so it picks 1.2.3.4
+    for (let i = 0; i < 10; i++) {
+      const res = await fetch(`${baseUrl}/api/sessions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Forwarded-For': '1.2.3.4, 10.0.0.1'
+        },
+        body: JSON.stringify({ sessionId: `sl-${i}`, serverName: 'test' })
+      })
+      expect(res.status).toBe(201)
+    }
+
+    const resFail = await fetch(`${baseUrl}/api/sessions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Forwarded-For': '1.2.3.4, 8.8.8.8, 127.0.0.1'
+        'X-Forwarded-For': '8.8.8.8, 1.2.3.4, 10.0.0.1'
       },
-      body: JSON.stringify({ sessionId: 's1-success', serverName: 'test' })
+      body: JSON.stringify({ sessionId: 'sl-fail', serverName: 'test' })
     })
-    expect(resSuccess.status).toBe(201)
+    expect(resFail.status).toBe(429)
   })
 
   it('disables proxy trust when TRUST_PROXY is false', async () => {
-    vi.stubEnv('TRUST_PROXY', 'false')
+    process.env.TRUST_PROXY = 'false'
     baseUrl = await startServer()
-
-    // With trust proxy = false, X-Forwarded-For should be ignored.
-    // All requests from localhost will be seen as 127.0.0.1
 
     for (let i = 0; i < 10; i++) {
       const res = await fetch(`${baseUrl}/api/sessions`, {
@@ -92,7 +100,6 @@ describe('Proxy IP Resolution', () => {
       expect(res.status).toBe(201)
     }
 
-    // 11th request should fail regardless of X-Forwarded-For
     const resFail = await fetch(`${baseUrl}/api/sessions`, {
       method: 'POST',
       headers: {

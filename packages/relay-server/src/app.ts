@@ -13,9 +13,18 @@ export function createApp(): express.Express {
     app.set('trust proxy', trustProxy === 'true')
   } else if (trustProxy && !Number.isNaN(Number(trustProxy))) {
     app.set('trust proxy', Number(trustProxy))
-  } else if (trustProxy) {
-    app.set('trust proxy', trustProxy)
+  } else if (trustProxy && trustProxy.trim().length > 0) {
+    // Support comma-separated list of IPs or subnets
+    if (trustProxy.includes(',')) {
+      app.set(
+        'trust proxy',
+        trustProxy.split(',').map((s) => s.trim())
+      )
+    } else {
+      app.set('trust proxy', trustProxy)
+    }
   } else {
+    // Default: trust first hop
     app.set('trust proxy', 1)
   }
 
