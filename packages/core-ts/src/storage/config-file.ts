@@ -32,7 +32,7 @@ function getConfigPath(): string {
 }
 
 const MAX_RETRIES = 3
-const BASE_DELAY_MS = 100
+const BASE_DELAY_MS = 10
 
 async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
@@ -44,6 +44,7 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
       await new Promise((r) => setTimeout(r, BASE_DELAY_MS * 2 ** attempt))
     }
   }
+  /* v8 ignore next */
   throw new Error('Unreachable')
 }
 
