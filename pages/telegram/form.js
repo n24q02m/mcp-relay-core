@@ -1,5 +1,5 @@
-import { getParams, handleFormSubmit, handleSkip } from '/shared/form-utils.js'
-import { renderFields, renderModes } from '/shared/ui.js'
+import { getParams, handleFormSubmit, handleSkip } from '../shared/form-utils.js'
+import { renderFields, renderModes } from '../shared/ui.js'
 
 const schema = {
   modes: [

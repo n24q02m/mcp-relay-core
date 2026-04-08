@@ -1,4 +1,4 @@
-import { bootstrapForm, getParams } from '/shared/form-utils.js'
+import { bootstrapForm, getParams } from '../shared/form-utils.js'
 
 const params = getParams()
 if (params) {

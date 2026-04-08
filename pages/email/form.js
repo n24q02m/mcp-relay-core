@@ -1,5 +1,5 @@
-import { getParams, handleFormSubmit, handleSkip } from '/shared/form-utils.js'
-import { renderFields } from '/shared/ui.js'
+import { getParams, handleFormSubmit, handleSkip } from '../shared/form-utils.js'
+import { renderFields } from '../shared/ui.js'
 
 const OAUTH_DOMAINS = ['outlook.com', 'hotmail.com', 'live.com']
 const APP_PASSWORD_DOMAINS = {
