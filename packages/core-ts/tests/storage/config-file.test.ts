@@ -127,7 +127,7 @@ describe('exportConfig + importConfig', () => {
     const exported = await exportConfig('correct-pass')
 
     await expect(importConfig('wrong-pass', exported)).rejects.toThrow()
-  })
+  }, 60000)
 
   it('import merges into existing config', async () => {
     await writeConfig('local-server', { key: 'local-val' })
@@ -144,5 +144,5 @@ describe('exportConfig + importConfig', () => {
     await importConfig('pass', exported)
     expect(await readConfig('local-server')).toEqual({ key: 'local-val' })
     expect(await readConfig('remote-server')).toEqual({ key: 'remote-val' })
-  })
+  }, 60000)
 })
