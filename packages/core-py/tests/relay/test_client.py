@@ -41,27 +41,40 @@ class TestGeneratePassphrase:
         passphrase = generate_passphrase()
         assert isinstance(passphrase, str)
         assert len(passphrase) > 0
-        # Note: can't simply split("-") to count words because some EFF words
-        # contain hyphens (e.g., "drop-down"). We verify via wordlist membership.
 
     def test_respects_custom_word_count(self):
-        passphrase = generate_passphrase(6)
-        # Verify by matching against wordlist — account for hyphenated words
-        found = [w for w in WORDLIST if w in passphrase]
-        assert len(found) >= 6
+        word_count = 6
+        passphrase = generate_passphrase(word_count)
+        word_set = set(WORDLIST)
+        segments = passphrase.split("-")
+
+        count = 0
+        current = ""
+        for segment in segments:
+            current = f"{current}-{segment}" if current else segment
+            if current in word_set:
+                count += 1
+                current = ""
+
+        assert count == word_count
+        assert current == ""
 
     def test_only_uses_words_from_wordlist(self):
         word_set = set(WORDLIST)
         for _ in range(20):
             passphrase = generate_passphrase()
-            # Reconstruct words by checking which wordlist entries appear
-            remaining = passphrase
-            matched = 0
-            for word in sorted(word_set, key=len, reverse=True):
-                if str(word) in remaining:
-                    remaining = remaining.replace(str(word), "", 1)
-                    matched += 1
-            assert matched >= 4
+            segments = passphrase.split("-")
+
+            count = 0
+            current = ""
+            for segment in segments:
+                current = f"{current}-{segment}" if current else segment
+                if current in word_set:
+                    count += 1
+                    current = ""
+
+            assert count == 4
+            assert current == ""
 
     def test_produces_different_passphrases(self):
         results = {generate_passphrase() for _ in range(10)}
