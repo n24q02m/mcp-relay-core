@@ -24,24 +24,50 @@ describe('WORDLIST', () => {
 })
 
 describe('generatePassphrase', () => {
+  // Helper to verify a passphrase consists of words from the wordlist
+  const verifyPassphrase = (passphrase: string, expectedWordCount: number) => {
+    const wordSet = new Set(WORDLIST)
+    // Some words in the wordlist have hyphens (e.g. 't-shirt', 'yo-yo')
+    // So splitting by '-' might give more parts than words.
+    // We check if the passphrase can be greedily decomposed into words from the list.
+    let remaining = passphrase
+    let wordsFound = 0
+
+    while (remaining.length > 0) {
+      let found = false
+      // Sort words by length descending to match longest possible word first (to handle 't-shirt' vs 't' if 't' was a word)
+      // But here we know words are separated by '-' in the output.
+
+      // Try to find a word from the set that matches the start
+      for (const word of WORDLIST) {
+        if (remaining.startsWith(word)) {
+          if (remaining.length === word.length || remaining[word.length] === '-') {
+            remaining = remaining.slice(word.length)
+            if (remaining.startsWith('-')) remaining = remaining.slice(1)
+            wordsFound++
+            found = true
+            break
+          }
+        }
+      }
+      if (!found) throw new Error(`Could not find word at start of: ${remaining}`)
+    }
+    expect(wordsFound).toBe(expectedWordCount)
+  }
+
   it('should return 4 words separated by hyphens by default', () => {
     const passphrase = generatePassphrase()
-    const words = passphrase.split('-')
-    expect(words).toHaveLength(4)
+    verifyPassphrase(passphrase, 4)
   })
 
   it('should respect custom word count', () => {
     const passphrase = generatePassphrase(6)
-    expect(passphrase.split('-')).toHaveLength(6)
+    verifyPassphrase(passphrase, 6)
   })
 
   it('should only use words from the WORDLIST', () => {
-    const wordSet = new Set(WORDLIST)
     for (let i = 0; i < 20; i++) {
-      const words = generatePassphrase().split('-')
-      for (const w of words) {
-        expect(wordSet.has(w)).toBe(true)
-      }
+      verifyPassphrase(generatePassphrase(), 4)
     }
   })
 
