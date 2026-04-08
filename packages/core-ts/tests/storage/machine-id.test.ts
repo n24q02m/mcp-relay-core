@@ -24,11 +24,12 @@ describe('getUsername', () => {
     expect(username.length).toBeGreaterThan(0)
   })
 
-  it('matches current OS user', () => {
+  it('matches current OS user (case-insensitive for Windows compatibility)', () => {
     const username = getUsername()
     const expected = process.env.USER ?? process.env.USERNAME
     if (expected) {
-      expect(username).toBe(expected)
+      // Use case-insensitive comparison to handle environment inconsistencies
+      expect(username.toLowerCase()).toBe(expected.toLowerCase())
     }
   })
 })

@@ -29,4 +29,5 @@ class TestGetUsername:
         username = get_username()
         expected = os.environ.get("USER") or os.environ.get("USERNAME")
         if expected:
-            assert username == expected
+            # Case-insensitive comparison for Windows compatibility
+            assert username.lower() == expected.lower()

@@ -5,38 +5,87 @@ import { promisify } from 'node:util'
 
 const execFileAsync = promisify(execFile)
 
+/**
+ * Get a stable machine identifier.
+ *
+ * Platform-specific:
+ * - Linux: /etc/machine-id
+ * - macOS: IOPlatformUUID via ioreg
+ * - Windows: MachineGuid from registry
+ *
+ * Falls back to hostname + first MAC address.
+ */
 export async function getMachineId(): Promise<string> {
   try {
     if (process.platform === 'linux') {
-      return (await readFile('/etc/machine-id', 'utf-8')).trim()
+      const mid = await _getLinuxId()
+      if (mid) return mid
     }
     if (process.platform === 'darwin') {
-      const { stdout } = await execFileAsync('ioreg', ['-rd1', '-c', 'IOPlatformExpertDevice'])
-      const match = stdout.match(/"IOPlatformUUID"\s*=\s*"([^"]+)"/)
-      if (match) return match[1]
+      const mid = await _getDarwinId()
+      if (mid) return mid
     }
     if (process.platform === 'win32') {
-      const { stdout } = await execFileAsync('reg', [
-        'query',
-        'HKLM\\SOFTWARE\\Microsoft\\Cryptography',
-        '/v',
-        'MachineGuid'
-      ])
-      const match = stdout.match(/MachineGuid\s+REG_SZ\s+(\S+)/)
-      if (match) return match[1]
+      const mid = await _getWindowsId()
+      if (mid) return mid
     }
   } catch {
     /* fallback below */
   }
 
   // Fallback: hostname + first MAC address
-  const nics = networkInterfaces()
-  const mac = Object.values(nics)
-    .flat()
-    .find((n) => n && !n.internal && n.mac !== '00:00:00:00:00:00')?.mac
-  return `${hostname()}-${mac ?? 'unknown'}`
+  const mac = _getFirstMac()
+  return `${hostname()}-${mac}`
 }
 
+async function _getLinuxId(): Promise<string | null> {
+  try {
+    return (await readFile('/etc/machine-id', 'utf-8')).trim()
+  } catch {
+    return null
+  }
+}
+
+async function _getDarwinId(): Promise<string | null> {
+  try {
+    const { stdout } = await execFileAsync('ioreg', ['-rd1', '-c', 'IOPlatformExpertDevice'])
+    const match = stdout.match(/"IOPlatformUUID"\s*=\s*"([^"]+)"/)
+    return match ? match[1] : null
+  } catch {
+    return null
+  }
+}
+
+async function _getWindowsId(): Promise<string | null> {
+  try {
+    const { stdout } = await execFileAsync('reg', [
+      'query',
+      'HKLM\\SOFTWARE\\Microsoft\\Cryptography',
+      '/v',
+      'MachineGuid'
+    ])
+    const match = stdout.match(/MachineGuid\s+REG_SZ\s+(\S+)/)
+    return match ? match[1] : null
+  } catch {
+    return null
+  }
+}
+
+function _getFirstMac(): string {
+  try {
+    const nics = networkInterfaces()
+    const mac = Object.values(nics)
+      .flat()
+      .find((n) => n && !n.internal && n.mac !== '00:00:00:00:00:00')?.mac
+    return mac ?? 'unknown'
+  } catch {
+    return 'unknown'
+  }
+}
+
+/**
+ * Get current OS username.
+ */
 export function getUsername(): string {
   try {
     return userInfo().username
