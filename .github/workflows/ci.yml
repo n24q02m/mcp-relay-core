@@ -28,9 +28,6 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        shell: bash
     steps:
       - name: Harden Runner
         if: matrix.os == 'ubuntu-latest'
@@ -83,9 +80,6 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        shell: bash
     steps:
       - name: Harden Runner
         if: matrix.os == 'ubuntu-latest'
@@ -133,9 +127,6 @@ jobs:
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     needs: [lint-and-test-ts, lint-and-test-py]
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2
