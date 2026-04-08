@@ -32,6 +32,13 @@ sessionsRouter.post('/', (req: Request, res: Response) => {
     return
   }
 
+  // Security: Prevent type confusion. Express body parser might pass arrays or objects
+  // where a string is expected, bypassing `.length` checks and exposing logic flaws.
+  if (typeof sessionId !== 'string' || typeof serverName !== 'string') {
+    res.status(400).json({ error: 'sessionId and serverName must be strings' })
+    return
+  }
+
   if (sessionId.length > 256) {
     res.status(400).json({ error: 'sessionId too long (max 256 chars)' })
     return
@@ -94,6 +101,18 @@ sessionsRouter.post('/:id/result', (req: Request, res: Response) => {
     return
   }
 
+  // Security: Prevent type confusion. Express body parser might pass arrays or objects
+  // where a string is expected, bypassing `.length` checks and exposing logic flaws.
+  if (
+    typeof browserPub !== 'string' ||
+    typeof ciphertext !== 'string' ||
+    typeof iv !== 'string' ||
+    typeof tag !== 'string'
+  ) {
+    res.status(400).json({ error: 'browserPub, ciphertext, iv, and tag must be strings' })
+    return
+  }
+
   if (browserPub.length > 4096 || ciphertext.length > 4096 || iv.length > 4096 || tag.length > 4096) {
     res.status(400).json({ error: 'result field(s) too large (max 4KB each)' })
     return
@@ -140,6 +159,13 @@ sessionsRouter.post('/:id/messages', (req: Request, res: Response) => {
 
   if (!type || !text) {
     res.status(400).json({ error: 'type and text are required' })
+    return
+  }
+
+  // Security: Prevent type confusion. Express body parser might pass arrays or objects
+  // where a string is expected, bypassing `.length` checks and exposing logic flaws.
+  if (typeof type !== 'string' || typeof text !== 'string') {
+    res.status(400).json({ error: 'type and text must be strings' })
     return
   }
 
@@ -193,6 +219,13 @@ sessionsRouter.post('/:id/responses', (req: Request, res: Response) => {
 
   if (!messageId || value === undefined) {
     res.status(400).json({ error: 'messageId and value are required' })
+    return
+  }
+
+  // Security: Prevent type confusion. Express body parser might pass arrays or objects
+  // where a string is expected, bypassing `.length` checks and exposing logic flaws.
+  if (typeof messageId !== 'string' || typeof value !== 'string') {
+    res.status(400).json({ error: 'messageId and value must be strings' })
     return
   }
 
