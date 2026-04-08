@@ -30,7 +30,7 @@ async function main() {
     keyMaterial,
     { name: 'AES-GCM', length: 256 },
     true,
-    ['encrypt', 'decrypt'],
+    ['encrypt', 'decrypt']
   )
 
   // Export derived key
@@ -50,17 +50,25 @@ async function main() {
       shared_secret_hex: Buffer.from(sharedSecret).toString('hex'),
       passphrase,
       info: 'mcp-relay',
-      derived_key_hex: derivedKeyHex,
+      derived_key_hex: derivedKeyHex
     },
     aes_gcm: {
       plaintext,
       iv_hex: Buffer.from(fixedIv).toString('hex'),
       ciphertext_hex: Buffer.from(ciphertext).toString('hex'),
-      tag_hex: Buffer.from(tag).toString('hex'),
-    },
+      tag_hex: Buffer.from(tag).toString('hex')
+    }
   }
 
-  const outPath = resolve(import.meta.dirname ?? '.', '..', 'packages', 'core-ts', 'tests', 'fixtures', 'crypto-vectors.json')
+  const outPath = resolve(
+    import.meta.dirname ?? '.',
+    '..',
+    'packages',
+    'core-ts',
+    'tests',
+    'fixtures',
+    'crypto-vectors.json'
+  )
   writeFileSync(outPath, `${JSON.stringify(vectors, null, 2)}\n`)
   console.log(`Wrote ${outPath}`)
   console.log(JSON.stringify(vectors, null, 2))
