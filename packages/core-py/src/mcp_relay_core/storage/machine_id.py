@@ -15,7 +15,7 @@ def get_machine_id() -> str:
     Platform-specific:
     - Linux: /etc/machine-id
     - macOS: IOPlatformUUID via ioreg
-    - Windows: MachineGuid from registry
+    - Windows: MachineGuid from registry (via PowerShell)
 
     Falls back to hostname + first MAC address.
 
@@ -42,19 +42,18 @@ def get_machine_id() -> str:
         if system == "Windows":
             result = subprocess.run(
                 [
-                    "reg",
-                    "query",
-                    r"HKLM\SOFTWARE\Microsoft\Cryptography",
-                    "/v",
-                    "MachineGuid",
+                    "powershell",
+                    "-NoProfile",
+                    "-Command",
+                    "Get-ItemProperty -Path HKLM:\\SOFTWARE\\Microsoft\\Cryptography -Name MachineGuid | Select-Object -ExpandProperty MachineGuid",
                 ],
                 capture_output=True,
                 text=True,
-                timeout=5,
+                timeout=10,
             )
-            match = re.search(r"MachineGuid\s+REG_SZ\s+(\S+)", result.stdout)
-            if match:
-                return match.group(1)
+            guid = result.stdout.strip()
+            if guid:
+                return guid
     except Exception:
         pass
 

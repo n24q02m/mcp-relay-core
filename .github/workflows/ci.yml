@@ -21,11 +21,16 @@ jobs:
   # Lint & Test TypeScript (core-ts + relay-server)
   # ============================================================================
   lint-and-test-ts:
-    name: Lint & Test (TypeScript)
+    name: Lint & Test (TypeScript, ${{ matrix.os }})
     if: github.event_name == 'pull_request' || github.event_name == 'push'
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Harden Runner
+        if: matrix.os == 'ubuntu-latest'
         uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2
         with:
           egress-policy: audit
@@ -57,18 +62,23 @@ jobs:
         run: cd packages/relay-server && bun run test:coverage
 
       - name: Upload coverage to Codecov
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6
 
   # ============================================================================
   # Lint & Test Python (core-py)
   # ============================================================================
   lint-and-test-py:
-    name: Lint & Test (Python)
+    name: Lint & Test (Python, ${{ matrix.os }})
     if: github.event_name == 'pull_request' || github.event_name == 'push'
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Harden Runner
+        if: matrix.os == 'ubuntu-latest'
         uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2
         with:
           egress-policy: audit
@@ -95,7 +105,7 @@ jobs:
         run: cd packages/core-py && uv run pytest --cov --cov-report=xml
 
       - name: Upload coverage to Codecov
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6
         with:
           files: packages/core-py/coverage.xml

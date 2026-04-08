@@ -16,14 +16,14 @@ export async function getMachineId(): Promise<string> {
       if (match) return match[1]
     }
     if (process.platform === 'win32') {
-      const { stdout } = await execFileAsync('reg', [
-        'query',
-        'HKLM\\SOFTWARE\\Microsoft\\Cryptography',
-        '/v',
-        'MachineGuid'
+      // Use powershell to get MachineGuid as it's more reliable than 'reg query' parsing across encodings
+      const { stdout } = await execFileAsync('powershell', [
+        '-NoProfile',
+        '-Command',
+        'Get-ItemProperty -Path HKLM:\\SOFTWARE\\Microsoft\\Cryptography -Name MachineGuid | Select-Object -ExpandProperty MachineGuid'
       ])
-      const match = stdout.match(/MachineGuid\s+REG_SZ\s+(\S+)/)
-      if (match) return match[1]
+      const guid = stdout.trim()
+      if (guid) return guid
     }
   } catch {
     /* fallback below */
