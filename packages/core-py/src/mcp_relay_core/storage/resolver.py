@@ -1,7 +1,6 @@
 """Config resolution: env vars -> config file -> defaults -> None."""
 
 import os
-import re
 from typing import Literal
 
 from mcp_relay_core.storage.config_file import read_config
@@ -46,13 +45,11 @@ def resolve_config(
     # 1. Check env vars
     env_config: dict[str, str] = {}
     all_env_present = len(required_fields) > 0
+    # Optimization: Use str.replace instead of re.sub for faster string manipulation,
+    # and compute loop-invariant server prefix outside the loop.
+    env_prefix = "MCP_" + server_name.replace("-", "_").upper() + "_"
     for field in required_fields:
-        env_key = (
-            "MCP_"
-            + re.sub(r"-", "_", server_name).upper()
-            + "_"
-            + re.sub(r"-", "_", field).upper()
-        )
+        env_key = env_prefix + field.replace("-", "_").upper()
         value = os.environ.get(env_key, "")
         if value:
             env_config[field] = value
