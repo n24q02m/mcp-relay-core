@@ -1,0 +1,6 @@
+// EFF Long Wordlist - 7776 words for Diceware passphrase generation
+// prettier-ignore
+drop-down
+felt-tip
+t-shirt
+yo-yo
