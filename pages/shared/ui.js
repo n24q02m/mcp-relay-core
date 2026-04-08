@@ -232,7 +232,7 @@ export function startMessagePolling(sessionId, statusContainer) {
 }
 
 // Show status message
-export function showStatus(container, message, type = 'info') {
+export function showStatus(container, message, type = 'success') {
   const status = document.getElementById('status') || document.createElement('div')
   status.id = 'status'
   status.className = `status status-${type}`

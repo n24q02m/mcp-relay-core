@@ -101,7 +101,7 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
         showStatus(
           document.getElementById('status-container'),
           'Setup skipped. Server will use default settings.',
-          'info'
+          'success'
         )
         document.getElementById('setup-form').style.display = 'none'
       }
