@@ -26,9 +26,6 @@ describe('WORDLIST', () => {
 describe('generatePassphrase', () => {
   it('should return 4 words separated by hyphens by default', () => {
     const passphrase = generatePassphrase()
-    // Note: can't just split by '-' because some words contain hyphens
-    // but we can check the total count of components if we know which ones have hyphens.
-    // For simplicity, we just check it's non-empty.
     expect(passphrase.length).toBeGreaterThan(0)
   })
 
@@ -52,7 +49,6 @@ describe('generatePassphrase', () => {
     for (let i = 0; i < 10; i++) {
       results.add(generatePassphrase())
     }
-    // With ~52 bits entropy per passphrase, collisions are vanishingly rare
     expect(results.size).toBeGreaterThan(1)
   })
 })
@@ -92,7 +88,6 @@ describe('createSession', () => {
     const session = await createSession('https://relay.example.com', 'test-server', mockSchema)
 
     expect(session.sessionId).toHaveLength(64) // 32 bytes hex
-    // Passphrase contains words joined by hyphens. Words can also have hyphens.
     expect(session.passphrase).toMatch(/^[a-z-]+$/)
     expect(session.relayUrl).toContain('https://relay.example.com/setup?s=')
     expect(session.relayUrl).toContain('#k=')
@@ -116,12 +111,10 @@ describe('pollForResult', () => {
   })
 
   it('should decrypt and return credentials on 200', async () => {
-    // Simulate browser-side encryption
     const cliKeyPair = await generateKeyPair()
     const browserKeyPair = await generateKeyPair()
     const passphrase = 'alpha-bravo-charlie-delta'
 
-    // Browser derives shared secret with CLI public key
     const sharedSecret = await deriveSharedSecret(browserKeyPair.privateKey, cliKeyPair.publicKey)
     const aesKey = await deriveAesKey(sharedSecret, passphrase)
     const credentials = { token: 'secret-123', api_key: 'key-456' }
@@ -155,7 +148,6 @@ describe('pollForResult', () => {
     const result = await pollForResult('https://relay.example.com', session, 10, 5000)
     expect(result).toEqual(credentials)
 
-    // Session kept alive for bidirectional messaging (no DELETE on success)
     const deleteCalls = vi.mocked(fetch).mock.calls.filter((c) => c[1]?.method === 'DELETE')
     expect(deleteCalls).toHaveLength(0)
   })
@@ -231,7 +223,6 @@ describe('pollForResult', () => {
       relayUrl: 'https://relay.example.com/setup?s=slow-session'
     }
 
-    // Very short timeout + interval to test timeout path
     await expect(pollForResult('https://relay.example.com', session, 10, 50)).rejects.toThrow('Relay setup timed out')
   })
 
@@ -272,6 +263,6 @@ describe('pollForResult', () => {
 
     const result = await pollForResult('https://relay.example.com', session, 10, 5000)
     expect(result).toEqual({ key: 'value' })
-    expect(callCount).toBe(3) // 2 x 202, then 1 x 200
+    expect(callCount).toBe(3)
   })
 })
