@@ -193,6 +193,7 @@ class TestPBKDF2Migration:
         from mcp_relay_core.storage.encryption import (
             LEGACY_PBKDF2_ITERATIONS,
             PBKDF2_ITERATIONS,
+            V1_LEGACY_PBKDF2_ITERATIONS,
             decrypt_data,
             derive_file_key,
             encrypt_data,
@@ -201,23 +202,27 @@ class TestPBKDF2Migration:
 
         machine_id = get_machine_id()
         username = get_username()
-        legacy_key = derive_file_key(machine_id, username, LEGACY_PBKDF2_ITERATIONS)
-        store = {"version": 1, "servers": {"legacy": {"key": "value"}}}
-        encrypted = encrypt_data(legacy_key, json.dumps(store))
 
-        config_path = _temp_config / "config.enc"
-        config_path.write_bytes(encrypted)
+        # Test both legacy iteration counts
+        for legacy_count in [LEGACY_PBKDF2_ITERATIONS, V1_LEGACY_PBKDF2_ITERATIONS]:
+            legacy_key = derive_file_key(machine_id, username, legacy_count)
+            server_name = f"legacy-{legacy_count}"
+            store = {"version": 1, "servers": {server_name: {"key": "value"}}}
+            encrypted = encrypt_data(legacy_key, json.dumps(store))
 
-        # Reading should trigger auto-migration
-        config = await read_config("legacy")
-        assert config == {"key": "value"}
+            config_path = _temp_config / "config.enc"
+            config_path.write_bytes(encrypted)
 
-        # Verify file is now encrypted with current iterations
-        new_data = config_path.read_bytes()
-        current_key = derive_file_key(machine_id, username, PBKDF2_ITERATIONS)
-        decrypted = decrypt_data(current_key, new_data)
-        assert json.loads(decrypted) == store
+            # Reading should trigger auto-migration
+            config = await read_config(server_name)
+            assert config == {"key": "value"}
 
-        # Legacy key should no longer decrypt
-        with pytest.raises(InvalidTag):
-            decrypt_data(legacy_key, new_data)
+            # Verify file is now encrypted with current iterations
+            new_data = config_path.read_bytes()
+            current_key = derive_file_key(machine_id, username, PBKDF2_ITERATIONS)
+            decrypted = decrypt_data(current_key, new_data)
+            assert json.loads(decrypted)["servers"][server_name] == {"key": "value"}
+
+            # Legacy key should no longer decrypt (unless it's the same as current, which it isn't)
+            with pytest.raises(InvalidTag):
+                decrypt_data(legacy_key, new_data)

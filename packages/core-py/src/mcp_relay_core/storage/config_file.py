@@ -14,6 +14,7 @@ from platformdirs import user_config_dir
 from mcp_relay_core.storage.encryption import (
     LEGACY_PBKDF2_ITERATIONS,
     PBKDF2_ITERATIONS,
+    V1_LEGACY_PBKDF2_ITERATIONS,
     decrypt_data,
     derive_file_key,
     derive_passphrase_key,
@@ -77,17 +78,20 @@ async def _load_store() -> dict[str, Any]:
         json_str = await asyncio.to_thread(decrypt_data, key, data)
         return json.loads(json_str)
     except Exception as err:
-        try:
-            legacy_key = await asyncio.to_thread(
-                derive_file_key, machine_id, username, LEGACY_PBKDF2_ITERATIONS
-            )
-            json_str = await asyncio.to_thread(decrypt_data, legacy_key, data)
-            store = json.loads(json_str)
-            # Auto-migrate to current iterations
-            await _save_store(store)
-            return store
-        except Exception:
-            raise err from None
+        # Try legacy iteration counts in descending order
+        for iterations in [LEGACY_PBKDF2_ITERATIONS, V1_LEGACY_PBKDF2_ITERATIONS]:
+            try:
+                legacy_key = await asyncio.to_thread(
+                    derive_file_key, machine_id, username, iterations
+                )
+                json_str = await asyncio.to_thread(decrypt_data, legacy_key, data)
+                store = json.loads(json_str)
+                # Auto-migrate to current iterations
+                await _save_store(store)
+                return store
+            except Exception:
+                continue
+        raise err from None
 
 
 async def _save_store(store: dict[str, Any]) -> None:
@@ -182,19 +186,26 @@ async def import_config(passphrase: str, data: bytes) -> None:
     Raises:
         cryptography.exceptions.InvalidTag: If passphrase is wrong.
     """
-    try:
-        key = await asyncio.to_thread(
-            derive_passphrase_key, passphrase, PBKDF2_ITERATIONS
-        )
-        json_str = await asyncio.to_thread(decrypt_data, key, data)
-    except Exception as err:
+    json_str = None
+    last_err = None
+
+    # Try all iteration counts in descending order
+    for iterations in [
+        PBKDF2_ITERATIONS,
+        LEGACY_PBKDF2_ITERATIONS,
+        V1_LEGACY_PBKDF2_ITERATIONS,
+    ]:
         try:
-            legacy_key = await asyncio.to_thread(
-                derive_passphrase_key, passphrase, LEGACY_PBKDF2_ITERATIONS
-            )
-            json_str = await asyncio.to_thread(decrypt_data, legacy_key, data)
-        except Exception:
-            raise err from None
+            key = await asyncio.to_thread(derive_passphrase_key, passphrase, iterations)
+            json_str = await asyncio.to_thread(decrypt_data, key, data)
+            break
+        except Exception as err:
+            last_err = err
+            continue
+
+    if json_str is None:
+        raise last_err from None
+
     imported = json.loads(json_str)
 
     store = await _load_store()

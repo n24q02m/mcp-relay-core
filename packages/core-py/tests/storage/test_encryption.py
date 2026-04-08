@@ -6,6 +6,7 @@ from cryptography.exceptions import InvalidTag
 from mcp_relay_core.storage.encryption import (
     LEGACY_PBKDF2_ITERATIONS,
     PBKDF2_ITERATIONS,
+    V1_LEGACY_PBKDF2_ITERATIONS,
     decrypt_data,
     derive_file_key,
     derive_passphrase_key,
@@ -85,7 +86,7 @@ class TestEncryptDecryptRoundtrip:
 
     def test_handles_unicode_text(self):
         key = derive_file_key("m", "u")
-        text = "Xin chao the gioi! Tieng Viet co dau"
+        text = "Xin chao the gioi! Emoji: Tieng Viet co dau"
         encrypted = encrypt_data(key, text)
         decrypted = decrypt_data(key, encrypted)
         assert decrypted == text
@@ -109,17 +110,21 @@ class TestPBKDF2Iterations:
     def test_different_iterations_produce_different_keys(self):
         key_current = derive_file_key("m", "u", PBKDF2_ITERATIONS)
         key_legacy = derive_file_key("m", "u", LEGACY_PBKDF2_ITERATIONS)
+        key_v1 = derive_file_key("m", "u", V1_LEGACY_PBKDF2_ITERATIONS)
 
         encrypted = encrypt_data(key_current, "secret")
         with pytest.raises(InvalidTag):
             decrypt_data(key_legacy, encrypted)
+        with pytest.raises(InvalidTag):
+            decrypt_data(key_v1, encrypted)
 
-    def test_legacy_key_can_decrypt_legacy_data(self):
-        key_legacy = derive_file_key("m", "u", LEGACY_PBKDF2_ITERATIONS)
-        plaintext = "migration test"
-        encrypted = encrypt_data(key_legacy, plaintext)
-        decrypted = decrypt_data(key_legacy, encrypted)
-        assert decrypted == plaintext
+    def test_legacy_keys_can_decrypt_legacy_data(self):
+        for iterations in [LEGACY_PBKDF2_ITERATIONS, V1_LEGACY_PBKDF2_ITERATIONS]:
+            key_legacy = derive_file_key("m", "u", iterations)
+            plaintext = "migration test"
+            encrypted = encrypt_data(key_legacy, plaintext)
+            decrypted = decrypt_data(key_legacy, encrypted)
+            assert decrypted == plaintext
 
     def test_passphrase_key_different_iterations(self):
         key_current = derive_passphrase_key("pass", PBKDF2_ITERATIONS)
