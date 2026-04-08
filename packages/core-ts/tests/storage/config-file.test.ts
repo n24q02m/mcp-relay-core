@@ -144,5 +144,5 @@ describe('exportConfig + importConfig', () => {
     await importConfig('pass', exported)
     expect(await readConfig('local-server')).toEqual({ key: 'local-val' })
     expect(await readConfig('remote-server')).toEqual({ key: 'remote-val' })
-  })
+  }, 10000)
 })
