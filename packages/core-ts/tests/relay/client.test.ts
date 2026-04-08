@@ -36,12 +36,19 @@ describe('generatePassphrase', () => {
   })
 
   it('should only use words from the WORDLIST', () => {
-    const wordSet = new Set(WORDLIST)
-    for (let i = 0; i < 20; i++) {
-      const words = generatePassphrase().split('-')
-      for (const w of words) {
-        expect(wordSet.has(w)).toBe(true)
+    for (let i = 0; i < 50; i++) {
+      const passphrase = generatePassphrase()
+      let remaining = passphrase
+      const sortedWordlist = [...WORDLIST].sort((a, b) => b.length - a.length)
+      let matched = 0
+      for (const word of sortedWordlist) {
+        while (remaining.includes(word)) {
+          remaining = remaining.replace(word, 'TOKEN')
+          matched++
+        }
       }
+      expect(matched).toBeGreaterThanOrEqual(4)
+      expect(remaining.replace(/-/g, '').replace(/TOKEN/g, '')).toBe('')
     }
   })
 
