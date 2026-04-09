@@ -94,15 +94,17 @@ class JWTIssuer:
             "iat": now,
             "exp": now + datetime.timedelta(seconds=expires_in_seconds),
         }
+        # ty ignore needed here, as jwt-api typing doesn't correctly capture all crypto types
         return jwt.encode(
-            payload, self.private_key, algorithm="RS256", headers={"kid": self._kid}
+            payload, self.private_key, algorithm="RS256", headers={"kid": self._kid}  # ty: ignore[invalid-argument-type]
         )
 
     def verify_access_token(self, token: str) -> dict:
         """Verify JWT and return payload. Raises standard PyJWT exceptions on failure."""
+        # ty ignore needed here, as jwt-api typing doesn't correctly capture all crypto types
         return jwt.decode(
             token,
-            self.public_key,
+            self.public_key,  # ty: ignore[invalid-argument-type]
             algorithms=["RS256"],
             audience=self.server_name,
             issuer=self.server_name,

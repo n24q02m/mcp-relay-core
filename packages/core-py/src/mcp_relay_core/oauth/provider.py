@@ -70,9 +70,10 @@ class OAuthProvider:
         jwt_issuer: JWTIssuer,
         cache: IOAuthSessionCache | None = None,
     ):
+        from mcp_relay_core.schema.types import RelayConfigSchema
         self.server_name = server_name
         self.relay_base_url = relay_base_url
-        self.relay_schema = relay_schema
+        self.relay_schema: RelayConfigSchema = relay_schema  # ty: ignore[invalid-assignment]
         self.jwt_issuer = jwt_issuer
         self.cache = cache or InMemoryAuthCache()
 
