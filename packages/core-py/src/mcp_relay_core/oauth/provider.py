@@ -120,14 +120,14 @@ class OAuthProvider:
         user_id_extractor: Callable[[dict], str],
     ) -> tuple[str, dict]:
         """
-        Exchange the authorization code (which is the relay session_id) 
+        Exchange the authorization code (which is the relay session_id)
         for an access_token. PKCE verification is performed.
-        
+
         Args:
             code: The authorization code provided by the client.
             code_verifier: The PKCE code verifier.
             user_id_extractor: Function to derive a unique user_id from the credentials.
-            
+
         Returns:
             Tuple of (access_token_jwt, credentials_dict)
         """
