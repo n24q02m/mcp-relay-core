@@ -141,7 +141,7 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
         )
         document.getElementById('setup-form').style.display = 'none'
       }
-    } catch (err) {
+    } catch (_err) {
       skipBtn.disabled = false
       skipBtn.textContent = 'Skip Setup (use defaults)'
     }
