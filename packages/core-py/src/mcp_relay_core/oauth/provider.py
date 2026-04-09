@@ -22,6 +22,7 @@ from .jwt_issuer import JWTIssuer
 @dataclass
 class PreAuthSession:
     """Pending auth before code exchange."""
+
     session_id: str
     client_id: str
     redirect_uri: str
@@ -35,6 +36,7 @@ class PreAuthSession:
 
 class IOAuthSessionCache(Protocol):
     """Cache for maintaining state between /authorize and /token endpoints."""
+
     def save(self, session: PreAuthSession) -> None: ...
     def get_and_delete(self, session_id: str) -> PreAuthSession | None: ...
 
@@ -95,7 +97,7 @@ class OAuthProvider:
                 "state": state,
                 "codeChallenge": code_challenge,
                 "codeChallengeMethod": code_challenge_method,
-            }
+            },
         )
 
         # Store private key and passphrase temporarily
@@ -138,7 +140,9 @@ class OAuthProvider:
         # Verify PKCE
         if pre_auth.code_challenge_method == "S256":
             digest = hashlib.sha256(code_verifier.encode("ascii")).digest()
-            expected_challenge = base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
+            expected_challenge = (
+                base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
+            )
             if not hmac.compare_digest(expected_challenge, pre_auth.code_challenge):
                 raise ValueError("invalid_grant: PKCE verification failed")
         elif pre_auth.code_challenge_method == "plain":
@@ -151,7 +155,7 @@ class OAuthProvider:
         relay_session = RelaySession(
             session_id=pre_auth.session_id,
             private_key=import_private_key(pre_auth.private_key_b64),
-            public_key=None, # Not needed for decryption
+            public_key=None,  # Not needed for decryption
             passphrase=pre_auth.passphrase,
             relay_url="",
         )
