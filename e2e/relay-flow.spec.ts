@@ -61,8 +61,8 @@ test.describe('Relay Flow E2E', () => {
     await page.fill('#TELEGRAM_BOT_TOKEN', '123456:ABC-DEF-test-token')
     await page.click('#submit-btn')
 
-    // 6. Wait for success message
-    await expect(page.locator('.status-success')).toBeVisible({ timeout: 10_000 })
+    // 6. Wait for success message (we expect status-info because there's no server polling completion in this test)
+    await expect(page.locator('.status-info')).toBeVisible({ timeout: 10_000 })
 
     // 7. CLI side: poll for result and decrypt
     const pollRes2 = await fetch(`${relay.url}/api/sessions/${sessionId}`)
@@ -106,7 +106,7 @@ test.describe('Relay Flow E2E', () => {
     await page.click('[data-mode-id="bot"]')
     await page.fill('#TELEGRAM_BOT_TOKEN', 'first-token')
     await page.click('#submit-btn')
-    await expect(page.locator('.status-success')).toBeVisible({ timeout: 10_000 })
+    await expect(page.locator('.status-info')).toBeVisible({ timeout: 10_000 })
 
     // Second submission via API (simulating another browser attempt)
     const secondRes = await fetch(`${relay.url}/api/sessions/${sessionId}/result`, {
