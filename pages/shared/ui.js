@@ -17,6 +17,14 @@ export function renderFields(container, fields) {
     input.required = field.required !== false
     div.appendChild(input)
 
+    if (input.required) {
+      const reqSpan = document.createElement('span')
+      reqSpan.setAttribute('aria-hidden', 'true')
+      reqSpan.style.color = '#c5221f'
+      reqSpan.textContent = ' *'
+      label.appendChild(reqSpan)
+    }
+
     if (field.helpText) {
       const help = document.createElement('small')
       help.textContent = field.helpText
@@ -234,6 +242,7 @@ export function showStatus(container, message, type = 'info') {
   const status = document.getElementById('status') || document.createElement('div')
   status.id = 'status'
   status.className = `status status-${type}`
+  status.setAttribute('role', 'alert')
   status.textContent = message
   container.appendChild(status)
 }

@@ -48,18 +48,27 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+        shell: bash
 
       - name: Lint & type-check core-ts
-        run: cd packages/core-ts && bun run check
+        run: bun run check
+        working-directory: packages/core-ts
+        shell: bash
 
       - name: Test core-ts with coverage
-        run: cd packages/core-ts && bun run test:coverage
+        run: bun run test:coverage
+        working-directory: packages/core-ts
+        shell: bash
 
       - name: Lint & type-check relay-server
-        run: cd packages/relay-server && bun run check
+        run: bun run check
+        working-directory: packages/relay-server
+        shell: bash
 
       - name: Test relay-server with coverage
-        run: cd packages/relay-server && bun run test:coverage
+        run: bun run test:coverage
+        working-directory: packages/relay-server
+        shell: bash
 
       - name: Upload coverage to Codecov
         if: github.event_name == 'push' && matrix.os == 'ubuntu-latest'
@@ -132,12 +141,17 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+        shell: bash
 
       - name: Build core-ts
-        run: cd packages/core-ts && bun run build
+        run: bun run build
+        working-directory: packages/core-ts
+        shell: bash
 
       - name: Build relay-server
-        run: cd packages/relay-server && bun run build
+        run: bun run build
+        working-directory: packages/relay-server
+        shell: bash
 
   # ============================================================================
   # Semgrep SAST

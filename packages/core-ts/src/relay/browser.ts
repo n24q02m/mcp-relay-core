@@ -27,9 +27,9 @@ async function openInWsl(url: string): Promise<boolean> {
     /* fall through */
   }
 
-  // Fallback to cmd.exe /c start
+  // Fallback to rundll32.exe url.dll,FileProtocolHandler
   try {
-    await execFileAsync('cmd.exe', ['/c', 'start', '', url.replace(/&/g, '^&')])
+    await execFileAsync('rundll32.exe', ['url.dll,FileProtocolHandler', url])
     return true
   } catch {
     /* fall through */
@@ -42,7 +42,7 @@ async function openInWsl(url: string): Promise<boolean> {
  * Try to open URL in default browser. Returns true if likely succeeded.
  *
  * Detection order:
- * 1. win32: `start` command
+ * 1. win32: rundll32.exe
  * 2. darwin: `open` command
  * 3. linux: check WSL then `xdg-open`
  *
@@ -50,7 +50,7 @@ async function openInWsl(url: string): Promise<boolean> {
  */
 export async function tryOpenBrowser(url: string): Promise<boolean> {
   try {
-    // Validate URL to prevent shell injection
+    // Validate URL
     if (!/^https?:\/\//i.test(url)) {
       return false
     }
@@ -58,7 +58,7 @@ export async function tryOpenBrowser(url: string): Promise<boolean> {
     const platform = process.platform
 
     if (platform === 'win32') {
-      await execFileAsync('cmd', ['/c', 'start', '""', url])
+      await execFileAsync('rundll32.exe', ['url.dll,FileProtocolHandler', url])
       return true
     }
 

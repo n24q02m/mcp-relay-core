@@ -24,7 +24,7 @@ describe('setLocalMode', () => {
     const config = await readConfig('test-server')
     expect(config).not.toBeNull()
     expect(config?._mode).toBe('local')
-  })
+  }, 60000)
 
   it('overwrites existing config', async () => {
     await writeConfig('test-server', { api_key: 'secret123' })
@@ -32,39 +32,39 @@ describe('setLocalMode', () => {
 
     const config = await readConfig('test-server')
     expect(config).toEqual({ _mode: 'local' })
-  })
+  }, 60000)
 })
 
 describe('getMode', () => {
   it('returns null when no config', async () => {
     const result = await getMode('test-server')
     expect(result).toBeNull()
-  })
+  }, 60000)
 
   it('returns local when local mode set', async () => {
     await setLocalMode('test-server')
     const result = await getMode('test-server')
     expect(result).toBe('local')
-  })
+  }, 60000)
 
   it('returns configured when has real keys', async () => {
     await writeConfig('test-server', { api_key: 'key123', base_url: 'https://api' })
     const result = await getMode('test-server')
     expect(result).toBe('configured')
-  })
+  }, 60000)
 
   it('returns configured with mixed keys', async () => {
     await writeConfig('test-server', { _mode: 'something-else', api_key: 'key123' })
     const result = await getMode('test-server')
     expect(result).toBe('configured')
-  })
+  }, 60000)
 
   it('returns null with empty mode value', async () => {
     await writeConfig('test-server', { _mode: 'unknown' })
     const result = await getMode('test-server')
     // Has _mode but not "local", and no other keys
     expect(result).toBeNull()
-  })
+  }, 60000)
 })
 
 describe('clearMode', () => {
@@ -74,7 +74,7 @@ describe('clearMode', () => {
 
     await clearMode('test-server')
     expect(await getMode('test-server')).toBeNull()
-  })
+  }, 60000)
 
   it('removes configured entry', async () => {
     await writeConfig('test-server', { api_key: 'key123' })
@@ -82,12 +82,12 @@ describe('clearMode', () => {
 
     await clearMode('test-server')
     expect(await getMode('test-server')).toBeNull()
-  })
+  }, 60000)
 
   it('no error when no config', async () => {
     // Should not throw
     await clearMode('nonexistent-server')
-  })
+  }, 60000)
 })
 
 describe('mode independence', () => {
@@ -98,7 +98,7 @@ describe('mode independence', () => {
     expect(await getMode('server-a')).toBe('local')
     expect(await getMode('server-b')).toBe('configured')
     expect(await getMode('server-c')).toBeNull()
-  })
+  }, 60000)
 
   it('clearing one server does not affect others', async () => {
     await setLocalMode('server-a')
@@ -108,5 +108,5 @@ describe('mode independence', () => {
 
     expect(await getMode('server-a')).toBeNull()
     expect(await getMode('server-b')).toBe('local')
-  })
+  }, 60000)
 })

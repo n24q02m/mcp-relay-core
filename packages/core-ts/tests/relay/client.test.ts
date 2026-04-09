@@ -24,39 +24,37 @@ describe('WORDLIST', () => {
 })
 
 describe('generatePassphrase', () => {
+  function countWordsInPassphrase(passphrase: string): number {
+    const sortedWords = [...WORDLIST].sort((a, b) => b.length - a.length)
+    let remaining = passphrase
+    let count = 0
+    while (remaining.length > 0) {
+      const matchingWord = sortedWords.find((w) => remaining.startsWith(`${w}-`) || remaining === w)
+      if (!matchingWord) break
+      count++
+      remaining = remaining.substring(matchingWord.length)
+      if (remaining.startsWith('-')) {
+        remaining = remaining.substring(1)
+      }
+    }
+    expect(remaining).toBe('') // Must match entirely
+    return count
+  }
+
   it('should return 4 words separated by hyphens by default', () => {
     const passphrase = generatePassphrase()
-    const words = passphrase.split('-')
-    expect(words).toHaveLength(4)
+    expect(countWordsInPassphrase(passphrase)).toBe(4)
   })
 
   it('should respect custom word count', () => {
     const passphrase = generatePassphrase(6)
-    expect(passphrase.split('-')).toHaveLength(6)
+    expect(countWordsInPassphrase(passphrase)).toBe(6)
   })
 
   it('should only use words from the WORDLIST', () => {
-    // Sort words by length descending so that longer prefixes are matched first
-    const sortedWords = [...WORDLIST].sort((a, b) => b.length - a.length)
-
     for (let i = 0; i < 20; i++) {
       const passphrase = generatePassphrase()
-      let remaining = passphrase
-      let valid = true
-
-      while (remaining.length > 0) {
-        const matchingWord = sortedWords.find((w) => remaining.startsWith(`${w}-`) || remaining === w)
-        if (!matchingWord) {
-          valid = false
-          break
-        }
-        remaining = remaining.substring(matchingWord.length)
-        if (remaining.startsWith('-')) {
-          remaining = remaining.substring(1)
-        }
-      }
-
-      expect(valid).toBe(true)
+      expect(() => countWordsInPassphrase(passphrase)).not.toThrow()
     }
   })
 
