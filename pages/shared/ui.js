@@ -118,7 +118,8 @@ export function renderMessage(container, message) {
     if (oauthCode) {
       const code = document.createElement('code')
       code.textContent = oauthCode
-      code.style.cssText = 'display: block; font-size: 1.5em; padding: 12px; background: #f0f0f0; color: #1a1a2e; border-radius: 4px; text-align: center; letter-spacing: 3px; user-select: all; font-weight: bold;'
+      code.style.cssText =
+        'display: block; font-size: 1.5em; padding: 12px; background: #f0f0f0; color: #1a1a2e; border-radius: 4px; text-align: center; letter-spacing: 3px; user-select: all; font-weight: bold;'
       div.appendChild(code)
     }
   } else if (message.type === 'info') {
@@ -174,12 +175,14 @@ export function startMessagePolling(sessionId, statusContainer) {
           input.id = `input-${msg.id}`
           input.type = msg.data?.input_type || 'text'
           input.placeholder = msg.data?.placeholder || 'Enter value...'
-          input.style.cssText = 'width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid #555; background: #1a1a2e; color: #eee; box-sizing: border-box;'
+          input.style.cssText =
+            'width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid #555; background: #1a1a2e; color: #eee; box-sizing: border-box;'
           wrapper.appendChild(input)
 
           const btn = document.createElement('button')
           btn.textContent = 'Submit'
-          btn.style.cssText = 'background: #2980b9; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer;'
+          btn.style.cssText =
+            'background: #2980b9; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer;'
           const submitResponse = async () => {
             if (!input.value) return
             btn.disabled = true
@@ -197,7 +200,9 @@ export function startMessagePolling(sessionId, statusContainer) {
             label.style.color = '#888'
           }
           btn.addEventListener('click', submitResponse)
-          input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitResponse() })
+          input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') submitResponse()
+          })
           wrapper.appendChild(btn)
           setTimeout(() => input.focus(), 100)
           messagesContainer.appendChild(wrapper)
@@ -216,7 +221,9 @@ export function startMessagePolling(sessionId, statusContainer) {
           return
         }
       }
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+      /* ignore */
+    }
     setTimeout(pollMessages, 2000)
   }
   pollMessages()

@@ -59,6 +59,6 @@ repos:
     hooks:
       - id: enforce-commit
         name: Enforce feat and fix commit prefixes
-        entry: bash -c 'MSG=$(head -1 "$1"); if [[ "$MSG" =~ ^(feat|fix)(\(.+\))?:.+ ]] || [[ "$MSG" =~ ^chore\(release\):.+ ]]; then exit 0; fi; echo "ERROR: Only feat: and fix: prefixes allowed. Got: $MSG"; exit 1' --
+        entry: 'bash -c ''MSG=$(head -1 "$1"); if [[ "$MSG" =~ ^(feat|fix)(\(\.+\))?:.+ ]] || [[ "$MSG" =~ ^chore\(release\):.+ ]]; then exit 0; fi; echo "ERROR: Only feat: and fix: prefixes allowed. Got: $MSG"; exit 1'' --'
         language: system
         stages: [commit-msg]

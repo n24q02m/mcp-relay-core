@@ -4,6 +4,8 @@ Reads/writes ~/.config/mcp/config.enc with the same format as the TS version.
 """
 
 import json
+import os
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -97,6 +99,17 @@ def _save_store(store: dict[str, Any]) -> None:
     _with_retry(_write)
 
 
+def _schedule_restart() -> None:
+    """Schedule a process exit to reload config via MCP client."""
+    if "PYTEST_CURRENT_TEST" not in os.environ and "MCP_NO_RELOAD" not in os.environ:
+
+        def _exit() -> None:
+            time.sleep(1.0)
+            os._exit(0)
+
+        threading.Thread(target=_exit, daemon=True).start()
+
+
 def read_config(server_name: str) -> dict[str, str] | None:
     """Read config for a server.
 
@@ -120,6 +133,7 @@ def write_config(server_name: str, config: dict[str, str]) -> None:
     store = _load_store()
     store["servers"][server_name] = config
     _save_store(store)
+    _schedule_restart()
 
 
 def delete_config(server_name: str) -> None:
@@ -139,6 +153,7 @@ def delete_config(server_name: str) -> None:
             config_path.unlink()
     else:
         _save_store(store)
+    _schedule_restart()
 
 
 def list_configs() -> list[str]:
@@ -190,3 +205,4 @@ def import_config(passphrase: str, data: bytes) -> None:
     for name, config in imported["servers"].items():
         store["servers"][name] = config
     _save_store(store)
+    _schedule_restart()

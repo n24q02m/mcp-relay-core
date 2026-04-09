@@ -22,10 +22,22 @@ export function createApp(): express.Express {
 
   app.use(
     helmet({
-      contentSecurityPolicy: false
+      contentSecurityPolicy: true, // Fix insecure configuration of Helmet security middleware
+      crossOriginEmbedderPolicy: true
     })
   )
-  app.use(cors({ origin: corsOrigin }))
+
+  // Secure CORS origin handler
+  app.use(
+    cors({
+      origin: (requestOrigin, callback) => {
+        if (!corsOrigin || corsOrigin === false) return callback(null, false)
+        if (corsOrigin === '*') return callback(null, true)
+        if (Array.isArray(corsOrigin) && corsOrigin.includes(requestOrigin as string)) return callback(null, true)
+        callback(new Error('Not allowed by CORS'), false)
+      }
+    })
+  )
   app.use(express.json({ limit: '100kb' }))
 
   // Split rate limits: stricter for mutations, relaxed for polling

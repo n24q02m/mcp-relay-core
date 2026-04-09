@@ -21,6 +21,13 @@ export interface Session {
   id: string
   serverName: string
   schema: unknown
+  oauthState?: {
+    clientId: string
+    redirectUri: string
+    state: string
+    codeChallenge: string
+    codeChallengeMethod: string
+  }
   result: SessionResult | null
   skipped: boolean
   createdAt: number
@@ -62,7 +69,13 @@ export function getSession(id: string): Session | undefined {
   return session
 }
 
-export function createSession(id: string, serverName: string, schema: unknown, sourceIp: string): Session | null {
+export function createSession(
+  id: string,
+  serverName: string,
+  schema: unknown,
+  sourceIp: string,
+  oauthState?: Session['oauthState']
+): Session | null {
   const ipCount = countSessionsByIp(sourceIp)
   if (ipCount >= MAX_SESSIONS_PER_IP) {
     return null
@@ -72,6 +85,7 @@ export function createSession(id: string, serverName: string, schema: unknown, s
     id,
     serverName,
     schema,
+    oauthState,
     result: null,
     skipped: false,
     createdAt: Date.now(),

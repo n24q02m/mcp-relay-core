@@ -1,4 +1,14 @@
 export * from './crypto/index.js'
+// OAuth 2.1 multi-user infrastructure (HTTP mode)
+export { JWTIssuer } from './oauth/jwt-issuer.js'
+export {
+  InMemoryAuthCache,
+  type IOAuthSessionCache,
+  OAuthProvider,
+  type OAuthProviderOptions,
+  type PreAuthSession
+} from './oauth/provider.js'
+export { type IUserCredentialStore, SqliteUserStore } from './oauth/user-store.js'
 export { tryOpenBrowser } from './relay/browser.js'
 export {
   createSession,

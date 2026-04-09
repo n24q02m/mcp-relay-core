@@ -65,3 +65,29 @@ def derive_shared_secret(
         32-byte shared secret.
     """
     return private_key.exchange(ECDH(), public_key)
+
+
+def export_private_key(private_key: EllipticCurvePrivateKey) -> str:
+    """Export private key as base64url string.
+
+    Returns:
+        Base64url-encoded string (no padding).
+    """
+    raw = private_key.private_numbers().private_value
+    val_bytes = raw.to_bytes((raw.bit_length() + 7) // 8, byteorder="big")
+    return base64.urlsafe_b64encode(val_bytes).rstrip(b"=").decode("ascii")
+
+
+def import_private_key(b64url: str) -> EllipticCurvePrivateKey:
+    """Import private key from base64url string.
+
+    Args:
+        b64url: Base64url-encoded private key (no padding).
+
+    Returns:
+        EC private key object.
+    """
+    padded = b64url + "=" * (-len(b64url) % 4)
+    raw = base64.urlsafe_b64decode(padded)
+    val = int.from_bytes(raw, byteorder="big")
+    return ec.derive_private_key(val, SECP256R1())

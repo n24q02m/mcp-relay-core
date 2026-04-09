@@ -21,10 +21,17 @@ function paramId(req: Request): string {
 export const sessionsRouter: ReturnType<typeof Router> = Router()
 
 sessionsRouter.post('/', (req: Request, res: Response) => {
-  const { sessionId, serverName, schema } = req.body as {
+  const { sessionId, serverName, schema, oauthState } = req.body as {
     sessionId?: string
     serverName?: string
     schema?: unknown
+    oauthState?: {
+      clientId: string
+      redirectUri: string
+      state: string
+      codeChallenge: string
+      codeChallengeMethod: string
+    }
   }
 
   if (!sessionId || !serverName) {
@@ -55,7 +62,7 @@ sessionsRouter.post('/', (req: Request, res: Response) => {
   }
 
   const sourceIp = req.ip ?? req.socket.remoteAddress ?? 'unknown'
-  const session = createSession(sessionId, serverName, schema, sourceIp)
+  const session = createSession(sessionId, serverName, schema, sourceIp, oauthState)
 
   if (!session) {
     res.status(429).json({ error: 'Too many active sessions for this IP' })
@@ -79,9 +86,13 @@ sessionsRouter.get('/:id', (req: Request, res: Response) => {
   }
 
   if (session.result === null) {
-    res
-      .status(202)
-      .json({ status: 'pending', sessionId: session.id, serverName: session.serverName, schema: session.schema })
+    res.status(202).json({
+      status: 'pending',
+      sessionId: session.id,
+      serverName: session.serverName,
+      schema: session.schema,
+      oauthState: session.oauthState
+    })
     return
   }
 

@@ -2,11 +2,11 @@
  * Cross-platform browser opening with WSL detection.
  */
 
-import { exec } from 'node:child_process'
+import { execFile } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import { promisify } from 'node:util'
 
-const execAsync = promisify(exec)
+const execFileAsync = promisify(execFile)
 
 async function isWsl(): Promise<boolean> {
   try {
@@ -21,7 +21,7 @@ async function isWsl(): Promise<boolean> {
 async function openInWsl(url: string): Promise<boolean> {
   // Try wslview first (from wslu package, commonly available)
   try {
-    await execAsync(`wslview ${JSON.stringify(url)}`)
+    await execFileAsync('wslview', [url])
     return true
   } catch {
     /* fall through */
@@ -29,8 +29,7 @@ async function openInWsl(url: string): Promise<boolean> {
 
   // Fallback to cmd.exe /c start
   try {
-    const escapedUrl = url.replace(/&/g, '^&')
-    await execAsync(`cmd.exe /c start ${JSON.stringify(escapedUrl)}`)
+    await execFileAsync('cmd.exe', ['/c', 'start', '', url.replace(/&/g, '^&')])
     return true
   } catch {
     /* fall through */
@@ -57,15 +56,14 @@ export async function tryOpenBrowser(url: string): Promise<boolean> {
     }
 
     const platform = process.platform
-    const quotedUrl = JSON.stringify(url)
 
     if (platform === 'win32') {
-      await execAsync(`start "" ${quotedUrl}`)
+      await execFileAsync('cmd', ['/c', 'start', '""', url])
       return true
     }
 
     if (platform === 'darwin') {
-      await execAsync(`open ${quotedUrl}`)
+      await execFileAsync('open', [url])
       return true
     }
 
@@ -76,7 +74,7 @@ export async function tryOpenBrowser(url: string): Promise<boolean> {
       // Fall through to xdg-open
     }
 
-    await execAsync(`xdg-open ${quotedUrl}`)
+    await execFileAsync('xdg-open', [url])
     return true
   } catch {
     return false

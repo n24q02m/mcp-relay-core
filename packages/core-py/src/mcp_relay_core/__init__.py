@@ -3,11 +3,24 @@
 from mcp_relay_core.crypto.aes import decrypt, encrypt
 from mcp_relay_core.crypto.ecdh import (
     derive_shared_secret,
+    export_private_key,
     export_public_key,
     generate_key_pair,
+    import_private_key,
     import_public_key,
 )
 from mcp_relay_core.crypto.kdf import derive_aes_key
+
+# OAuth 2.1 multi-user infrastructure (HTTP mode)
+from mcp_relay_core.oauth import (
+    InMemoryAuthCache,
+    IOAuthSessionCache,
+    IUserCredentialStore,
+    JWTIssuer,
+    OAuthProvider,
+    PreAuthSession,
+    SqliteUserStore,
+)
 from mcp_relay_core.relay.browser import try_open_browser
 from mcp_relay_core.relay.client import (
     RelaySession,
@@ -63,4 +76,11 @@ __all__ = [
     "set_local_mode",
     "get_mode",
     "clear_mode",
+    "InMemoryAuthCache",
+    "IOAuthSessionCache",
+    "IUserCredentialStore",
+    "JWTIssuer",
+    "OAuthProvider",
+    "PreAuthSession",
+    "SqliteUserStore",
 ]

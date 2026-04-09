@@ -90,6 +90,13 @@ async function saveStore(store: ConfigStore): Promise<void> {
   await withRetry(() => writeFile(configPath, encrypted))
 }
 
+function scheduleRestart() {
+  if (process.env.NODE_ENV !== 'test' && !process.env.MCP_NO_RELOAD) {
+    // Schedule process exit to reload config via MCP client
+    setTimeout(() => process.exit(0), 1000).unref()
+  }
+}
+
 export async function readConfig(serverName: string): Promise<Record<string, string> | null> {
   const store = await loadStore()
   return store.servers[serverName] ?? null
@@ -99,6 +106,7 @@ export async function writeConfig(serverName: string, config: Record<string, str
   const store = await loadStore()
   store.servers[serverName] = config
   await saveStore(store)
+  scheduleRestart()
 }
 
 export async function deleteConfig(serverName: string): Promise<void> {
@@ -113,6 +121,7 @@ export async function deleteConfig(serverName: string): Promise<void> {
   } else {
     await saveStore(store)
   }
+  scheduleRestart()
 }
 
 export async function listConfigs(): Promise<string[]> {
@@ -147,4 +156,5 @@ export async function importConfig(passphrase: string, data: Buffer): Promise<vo
     store.servers[name] = config
   }
   await saveStore(store)
+  scheduleRestart()
 }
