@@ -1,3 +1,10 @@
+// Helper to prevent XSS from user-provided URLs
+function isSafeUrl(url) {
+  if (typeof url !== 'string') return false
+  const lower = url.trim().toLowerCase()
+  return lower.startsWith('http://') || lower.startsWith('https://')
+}
+
 // Render form fields from schema
 export function renderFields(container, fields) {
   for (const field of fields) {
@@ -30,7 +37,7 @@ export function renderFields(container, fields) {
       help.textContent = field.helpText
       div.appendChild(help)
     }
-    if (field.helpUrl) {
+    if (field.helpUrl && isSafeUrl(field.helpUrl)) {
       const link = document.createElement('a')
       link.href = field.helpUrl
       link.target = '_blank'
@@ -59,7 +66,9 @@ export function renderModes(container, modes, onSelect) {
     small.textContent = mode.description
     btn.append(strong, document.createElement('br'), small)
     btn.addEventListener('click', () => {
-      container.querySelectorAll('.mode-btn').forEach((b) => b.classList.remove('active'))
+      container.querySelectorAll('.mode-btn').forEach((b) => {
+        b.classList.remove('active')
+      })
       btn.classList.add('active')
       onSelect(mode)
     })
@@ -114,7 +123,7 @@ export function renderMessage(container, message) {
     div.appendChild(title)
 
     const oauthUrl = message.data?.url || message.data?.verification_uri
-    if (oauthUrl) {
+    if (oauthUrl && isSafeUrl(oauthUrl)) {
       const link = document.createElement('a')
       link.href = oauthUrl
       link.target = '_blank'
@@ -204,7 +213,7 @@ export function startMessagePolling(sessionId, statusContainer) {
             // Collapse input, show waiting status
             input.style.display = 'none'
             btn.style.display = 'none'
-            label.textContent = label.textContent + ' — submitted, waiting for server...'
+            label.textContent = `${label.textContent} — submitted, waiting for server...`
             label.style.color = '#888'
           }
           btn.addEventListener('click', submitResponse)
@@ -229,7 +238,7 @@ export function startMessagePolling(sessionId, statusContainer) {
           return
         }
       }
-    } catch (e) {
+    } catch (_e) {
       /* ignore */
     }
     setTimeout(pollMessages, 2000)

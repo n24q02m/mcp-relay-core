@@ -111,7 +111,7 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
         showStatus(document.getElementById('status-container'), 'Setup skipped. Using local ONNX models.', 'info')
         document.getElementById('setup-form').style.display = 'none'
       }
-    } catch (err) {
+    } catch (_err) {
       skipBtn.disabled = false
       skipBtn.textContent = 'Skip (use local mode)'
     }
