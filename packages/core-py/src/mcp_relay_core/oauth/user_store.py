@@ -36,7 +36,7 @@ class SqliteUserStore(IUserCredentialStore):
         # Ensure directory exists with strict permissions
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         if self.db_path.parent.exists() and os.name != 'nt':
-            os.chmod(self.db_path.parent, 0o700)
+            os.chmod(self.db_path.parent, 0o644)
 
         self._init_db()
 

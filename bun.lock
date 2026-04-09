@@ -5,6 +5,7 @@
       "name": "mcp-relay-core",
       "devDependencies": {
         "@playwright/test": "^1.59.1",
+        "semgrep": "^0.0.1",
       },
     },
     "packages/core-ts": {
@@ -483,6 +484,8 @@
     "safe-buffer": ["safe-buffer@5.2.1", "", {}, "sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ=="],
 
     "safer-buffer": ["safer-buffer@2.1.2", "", {}, "sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg=="],
+
+    "semgrep": ["semgrep@0.0.1", "", {}, "sha512-3FwxAjy4qZrOigd7rRnqCZFbG80y9K9YHEQSnxMibNNP2CkDzyS2uZQyK+MWDMnopoYH6oQ0X2pJ2nABhxy50g=="],
 
     "semver": ["semver@7.7.4", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA=="],
 
