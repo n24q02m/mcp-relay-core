@@ -34,6 +34,8 @@ export function renderFields(container, fields) {
       const link = document.createElement('a')
       link.href = field.helpUrl
       link.target = '_blank'
+      link.rel = 'noopener noreferrer'
+      link.setAttribute('aria-label', 'How to get this? (opens in a new tab)')
       link.textContent = 'How to get this?'
       link.className = 'help-link'
       div.appendChild(link)
@@ -53,14 +55,19 @@ export function renderModes(container, modes, onSelect) {
     btn.type = 'button'
     btn.className = 'mode-btn'
     btn.dataset.modeId = mode.id
+    btn.setAttribute('aria-pressed', 'false')
     const strong = document.createElement('strong')
     strong.textContent = mode.label
     const small = document.createElement('small')
     small.textContent = mode.description
     btn.append(strong, document.createElement('br'), small)
     btn.addEventListener('click', () => {
-      container.querySelectorAll('.mode-btn').forEach((b) => b.classList.remove('active'))
+      container.querySelectorAll('.mode-btn').forEach((b) => {
+        b.classList.remove('active')
+        b.setAttribute('aria-pressed', 'false')
+      })
       btn.classList.add('active')
+      btn.setAttribute('aria-pressed', 'true')
       onSelect(mode)
     })
     select.appendChild(btn)
@@ -159,6 +166,8 @@ export function renderMessage(container, message) {
 export function startMessagePolling(sessionId, statusContainer) {
   const messagesContainer = document.createElement('div')
   messagesContainer.id = 'server-messages'
+  messagesContainer.setAttribute('aria-live', 'polite')
+  messagesContainer.setAttribute('aria-atomic', 'false')
   document.body.appendChild(messagesContainer)
 
   let lastIndex = 0
@@ -170,6 +179,7 @@ export function startMessagePolling(sessionId, statusContainer) {
       for (const msg of messages) {
         if (msg.type === 'input_required') {
           const wrapper = document.createElement('div')
+          wrapper.setAttribute('aria-live', 'polite')
           wrapper.style.cssText = 'padding: 12px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #2980b9;'
 
           const label = document.createElement('label')
@@ -204,7 +214,7 @@ export function startMessagePolling(sessionId, statusContainer) {
             // Collapse input, show waiting status
             input.style.display = 'none'
             btn.style.display = 'none'
-            label.textContent = label.textContent + ' — submitted, waiting for server...'
+            label.textContent = `${label.textContent} — submitted, waiting for server...`
             label.style.color = '#888'
           }
           btn.addEventListener('click', submitResponse)
@@ -229,7 +239,7 @@ export function startMessagePolling(sessionId, statusContainer) {
           return
         }
       }
-    } catch (e) {
+    } catch (_e) {
       /* ignore */
     }
     setTimeout(pollMessages, 2000)
