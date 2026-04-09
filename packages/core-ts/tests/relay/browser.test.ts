@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 // Mock child_process and fs/promises before importing the module
 vi.mock('node:child_process', () => ({
-  exec: vi.fn((_cmd: string, cb: (err: Error | null) => void) => {
+  execFile: vi.fn((_cmd: string, _args: string[], cb: (err: Error | null) => void) => {
     cb(new Error('no display'))
   })
 }))
@@ -11,7 +11,7 @@ vi.mock('node:fs/promises', () => ({
   readFile: vi.fn().mockRejectedValue(new Error('ENOENT'))
 }))
 
-import { exec } from 'node:child_process'
+import { execFile } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import { tryOpenBrowser } from '../../src/relay/browser.js'
 
@@ -56,10 +56,10 @@ describe('tryOpenBrowser', () => {
       expect(result === true || result === false).toBe(true)
     })
 
-    it('never throws even when exec fails', async () => {
-      vi.mocked(exec).mockImplementation((_cmd: string, cb: unknown) => {
+    it('never throws even when execFile fails', async () => {
+      vi.mocked(execFile).mockImplementation((_cmd: string, _args: unknown, cb: unknown) => {
         ;(cb as (err: Error | null) => void)(new Error('command not found'))
-        return {} as ReturnType<typeof exec>
+        return {} as ReturnType<typeof execFile>
       })
 
       const result = await tryOpenBrowser('https://example.com/test-never-throws')
@@ -67,7 +67,7 @@ describe('tryOpenBrowser', () => {
     })
 
     it('never throws even with unexpected errors', async () => {
-      vi.mocked(exec).mockImplementation(() => {
+      vi.mocked(execFile).mockImplementation(() => {
         throw new TypeError('unexpected')
       })
 
@@ -75,23 +75,23 @@ describe('tryOpenBrowser', () => {
       expect(result).toBe(false)
     })
 
-    it('does not call exec for invalid URLs', async () => {
-      vi.mocked(exec).mockClear()
+    it('does not call execFile for invalid URLs', async () => {
+      vi.mocked(execFile).mockClear()
 
       await tryOpenBrowser('file:///etc/passwd')
       await tryOpenBrowser('')
       await tryOpenBrowser('javascript:alert(1)')
 
-      expect(exec).not.toHaveBeenCalled()
+      expect(execFile).not.toHaveBeenCalled()
     })
   })
 
   describe('WSL detection', () => {
     it('returns false when /proc/version is not found', async () => {
       vi.mocked(readFile).mockRejectedValue(new Error('ENOENT'))
-      vi.mocked(exec).mockImplementation((_cmd: string, cb: unknown) => {
+      vi.mocked(execFile).mockImplementation((_cmd: string, _args: unknown, cb: unknown) => {
         ;(cb as (err: Error | null) => void)(new Error('command not found'))
-        return {} as ReturnType<typeof exec>
+        return {} as ReturnType<typeof execFile>
       })
 
       const result = await tryOpenBrowser('https://example.com/wsl-test')
