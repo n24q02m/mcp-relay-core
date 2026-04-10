@@ -16,8 +16,8 @@ export class JWTIssuer {
   private privateKeyPath: string
   private publicKeyPath: string
   private kid = 'key-1'
-  private privateKey: any | null = null
-  private publicKey: any | null = null
+  private privateKey: jose.CryptoKey | jose.KeyObject | Uint8Array | null = null
+  private publicKey: jose.CryptoKey | jose.KeyObject | Uint8Array | null = null
   private _initialized = false
 
   constructor(serverName: string, keysDir = DEFAULT_KEYS_DIR) {

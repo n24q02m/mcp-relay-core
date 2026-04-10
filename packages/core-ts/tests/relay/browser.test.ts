@@ -98,12 +98,13 @@ describe('tryOpenBrowser', () => {
       vi.stubGlobal('process', { ...process, platform: 'linux' })
       vi.mocked(readFile).mockResolvedValue('WSL2 detected')
       vi.mocked(execFile).mockImplementation((cmd, _args, cb) => {
+        const callback = cb as (err: Error | null) => void
         if (cmd === 'wslview') {
-          ;(cb as any)(new Error('not found'))
+          callback(new Error('not found'))
         } else {
-          ;(cb as any)(null)
+          callback(null)
         }
-        return {} as any
+        return {} as ReturnType<typeof execFile>
       })
 
       const url = 'https://example.com'
@@ -118,12 +119,13 @@ describe('tryOpenBrowser', () => {
       vi.stubGlobal('process', { ...process, platform: 'linux' })
       vi.mocked(readFile).mockResolvedValue('microsoft')
       vi.mocked(execFile).mockImplementation((cmd, _args, cb) => {
+        const callback = cb as (err: Error | null) => void
         if (cmd === 'wslview' || cmd === 'rundll32.exe') {
-          ;(cb as any)(new Error('fail'))
+          callback(new Error('fail'))
         } else {
-          ;(cb as any)(null)
+          callback(null)
         }
-        return {} as any
+        return {} as ReturnType<typeof execFile>
       })
 
       const url = 'https://example.com'
@@ -150,8 +152,9 @@ describe('tryOpenBrowser', () => {
       vi.stubGlobal('process', { ...process, platform: 'linux' })
       vi.mocked(readFile).mockRejectedValue(new Error('ENOENT'))
       vi.mocked(execFile).mockImplementation((_cmd, _args, cb) => {
-        ;(cb as any)(new Error('failed'))
-        return {} as any
+        const callback = cb as (err: Error | null) => void
+        callback(new Error('failed'))
+        return {} as ReturnType<typeof execFile>
       })
 
       const result = await tryOpenBrowser('https://example.com')
