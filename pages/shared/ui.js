@@ -59,7 +59,9 @@ export function renderModes(container, modes, onSelect) {
     small.textContent = mode.description
     btn.append(strong, document.createElement('br'), small)
     btn.addEventListener('click', () => {
-      container.querySelectorAll('.mode-btn').forEach((b) => b.classList.remove('active'))
+      container.querySelectorAll('.mode-btn').forEach((b) => {
+        b.classList.remove('active')
+      })
       btn.classList.add('active')
       onSelect(mode)
     })
@@ -155,86 +157,98 @@ export function renderMessage(container, message) {
   container.appendChild(div)
 }
 
+// Internal helper to handle input response submission
+async function handleInputSubmission(sessionId, messageId, input, btn, label) {
+  if (!input.value) return
+  btn.disabled = true
+  btn.textContent = 'Sending...'
+  input.disabled = true
+  await fetch(`/api/sessions/${sessionId}/responses`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messageId, value: input.value })
+  })
+  // Collapse input, show waiting status
+  input.style.display = 'none'
+  btn.style.display = 'none'
+  label.textContent = `${label.textContent} — submitted, waiting for server...`
+  label.style.color = '#888'
+}
+
+// Internal helper to render an input request message
+function renderInputRequest(container, sessionId, msg) {
+  const wrapper = document.createElement('div')
+  wrapper.style.cssText = 'padding: 12px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #2980b9;'
+
+  const label = document.createElement('label')
+  label.textContent = msg.text
+  label.htmlFor = `input-${msg.id}`
+  label.style.display = 'block'
+  label.style.margin = '0 0 8px 0'
+  wrapper.appendChild(label)
+
+  const input = document.createElement('input')
+  input.id = `input-${msg.id}`
+  input.type = msg.data?.input_type || 'text'
+  input.placeholder = msg.data?.placeholder || 'Enter value...'
+  input.style.cssText =
+    'width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid #555; background: #1a1a2e; color: #eee; box-sizing: border-box;'
+  wrapper.appendChild(input)
+
+  const btn = document.createElement('button')
+  btn.textContent = 'Submit'
+  btn.style.cssText =
+    'background: #2980b9; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer;'
+
+  const onSubmit = () => handleInputSubmission(sessionId, msg.id, input, btn, label)
+
+  btn.addEventListener('click', onSubmit)
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') onSubmit()
+  })
+  wrapper.appendChild(btn)
+  setTimeout(() => input.focus(), 100)
+  container.appendChild(wrapper)
+}
+
+// Internal helper for the polling loop
+async function pollMessagesLoop(sessionId, statusContainer, messagesContainer, state) {
+  try {
+    const resp = await fetch(`/api/sessions/${sessionId}/messages?after=${state.lastIndex}`)
+    if (!resp.ok) return // session expired
+    const { messages } = await resp.json()
+    for (const msg of messages) {
+      if (msg.type === 'input_required') {
+        renderInputRequest(messagesContainer, sessionId, msg)
+      } else {
+        renderMessage(messagesContainer, msg)
+      }
+
+      state.lastIndex++
+
+      if (msg.type === 'complete') {
+        showStatus(statusContainer, msg.text || 'Setup complete!', 'success')
+        return
+      }
+      if (msg.type === 'error') {
+        showStatus(statusContainer, msg.text || 'Server reported an error', 'error')
+        return
+      }
+    }
+  } catch (_e) {
+    /* ignore */
+  }
+  setTimeout(() => pollMessagesLoop(sessionId, statusContainer, messagesContainer, state), 2000)
+}
+
 // Start polling for server messages after credential submit
 export function startMessagePolling(sessionId, statusContainer) {
   const messagesContainer = document.createElement('div')
   messagesContainer.id = 'server-messages'
   document.body.appendChild(messagesContainer)
 
-  let lastIndex = 0
-  const pollMessages = async () => {
-    try {
-      const resp = await fetch(`/api/sessions/${sessionId}/messages?after=${lastIndex}`)
-      if (!resp.ok) return // session expired
-      const { messages } = await resp.json()
-      for (const msg of messages) {
-        if (msg.type === 'input_required') {
-          const wrapper = document.createElement('div')
-          wrapper.style.cssText = 'padding: 12px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #2980b9;'
-
-          const label = document.createElement('label')
-          label.textContent = msg.text
-          label.htmlFor = `input-${msg.id}`
-          label.style.display = 'block'
-          label.style.margin = '0 0 8px 0'
-          wrapper.appendChild(label)
-
-          const input = document.createElement('input')
-          input.id = `input-${msg.id}`
-          input.type = msg.data?.input_type || 'text'
-          input.placeholder = msg.data?.placeholder || 'Enter value...'
-          input.style.cssText =
-            'width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid #555; background: #1a1a2e; color: #eee; box-sizing: border-box;'
-          wrapper.appendChild(input)
-
-          const btn = document.createElement('button')
-          btn.textContent = 'Submit'
-          btn.style.cssText =
-            'background: #2980b9; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer;'
-          const submitResponse = async () => {
-            if (!input.value) return
-            btn.disabled = true
-            btn.textContent = 'Sending...'
-            input.disabled = true
-            await fetch(`/api/sessions/${sessionId}/responses`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ messageId: msg.id, value: input.value })
-            })
-            // Collapse input, show waiting status
-            input.style.display = 'none'
-            btn.style.display = 'none'
-            label.textContent = label.textContent + ' — submitted, waiting for server...'
-            label.style.color = '#888'
-          }
-          btn.addEventListener('click', submitResponse)
-          input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') submitResponse()
-          })
-          wrapper.appendChild(btn)
-          setTimeout(() => input.focus(), 100)
-          messagesContainer.appendChild(wrapper)
-        } else {
-          renderMessage(messagesContainer, msg)
-        }
-
-        lastIndex++
-
-        if (msg.type === 'complete') {
-          showStatus(statusContainer, msg.text || 'Setup complete!', 'success')
-          return
-        }
-        if (msg.type === 'error') {
-          showStatus(statusContainer, msg.text || 'Server reported an error', 'error')
-          return
-        }
-      }
-    } catch (e) {
-      /* ignore */
-    }
-    setTimeout(pollMessages, 2000)
-  }
-  pollMessages()
+  const state = { lastIndex: 0 }
+  pollMessagesLoop(sessionId, statusContainer, messagesContainer, state)
 }
 
 // Show status message
