@@ -3,9 +3,9 @@
  * Uses jose (industry-standard, zero-dep, Web Crypto compatible).
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync, chmodSync } from 'node:fs'
-import { join } from 'node:path'
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
+import { join } from 'node:path'
 import * as jose from 'jose'
 
 const DEFAULT_KEYS_DIR = join(homedir(), '.mcp-relay', 'jwt-keys')
