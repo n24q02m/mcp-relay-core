@@ -45,13 +45,7 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
   const submitBtn = document.getElementById('submit-btn')
   let accountIndex = 0
 
-  function createAccountCard(idx) {
-    const card = document.createElement('div')
-    card.className = 'account-card'
-    card.dataset.idx = idx
-    card.style.cssText =
-      'border: 1px solid #333; border-radius: 8px; padding: 16px; margin-bottom: 12px; position: relative;'
-
+  function createCardHeader(idx, onRemove) {
     const header = document.createElement('div')
     header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;'
     const title = document.createElement('strong')
@@ -64,13 +58,61 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
       removeBtn.textContent = 'Remove'
       removeBtn.style.cssText =
         'background: #c0392b; color: white; border: none; border-radius: 4px; padding: 4px 12px; cursor: pointer; font-size: 13px;'
-      removeBtn.addEventListener('click', () => {
+      removeBtn.addEventListener('click', onRemove)
+      header.appendChild(removeBtn)
+    }
+    return header
+  }
+  function renderAccountExtraFields(container, domain, idx) {
+    container.innerHTML = ''
+    if (!domain) return
+
+    if (OAUTH_DOMAINS.includes(domain)) {
+      const notice = document.createElement('div')
+      notice.className = 'field'
+      const msg = document.createElement('p')
+      msg.textContent = 'Outlook requires OAuth2. This will be handled automatically by the server.'
+      notice.appendChild(msg)
+      container.appendChild(notice)
+    } else if (APP_PASSWORD_DOMAINS[domain]) {
+      const info = APP_PASSWORD_DOMAINS[domain]
+      renderFields(container, [
+        {
+          key: `password_${idx}`,
+          label: info.label,
+          type: 'password',
+          helpUrl: info.helpUrl,
+          helpText: info.helpText
+        }
+      ])
+    } else {
+      renderFields(container, [
+        { key: `password_${idx}`, label: 'Password', type: 'password' },
+        {
+          key: `imap_${idx}`,
+          label: 'IMAP Host',
+          type: 'text',
+          placeholder: 'imap.example.com',
+          required: false,
+          helpText: 'Optional. Leave empty for auto-detection.'
+        }
+      ])
+    }
+  }
+
+  function createAccountCard(idx) {
+    const card = document.createElement('div')
+    card.className = 'account-card'
+    card.dataset.idx = idx
+    card.style.cssText =
+      'border: 1px solid #333; border-radius: 8px; padding: 16px; margin-bottom: 12px; position: relative;'
+
+    card.appendChild(
+      createCardHeader(idx, () => {
         card.remove()
         updateAccountNumbers()
       })
-      header.appendChild(removeBtn)
-    }
-    card.appendChild(header)
+    )
 
     const emailContainer = document.createElement('div')
     renderFields(emailContainer, [
@@ -90,41 +132,7 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
     const emailInput = emailContainer.querySelector('input[type="email"]')
     emailInput.addEventListener('input', () => {
       const domain = emailInput.value.split('@')[1]?.toLowerCase()
-      extraContainer.innerHTML = ''
-
-      if (!domain) return
-
-      if (OAUTH_DOMAINS.includes(domain)) {
-        const notice = document.createElement('div')
-        notice.className = 'field'
-        const msg = document.createElement('p')
-        msg.textContent = 'Outlook requires OAuth2. This will be handled automatically by the server.'
-        notice.appendChild(msg)
-        extraContainer.appendChild(notice)
-      } else if (APP_PASSWORD_DOMAINS[domain]) {
-        const info = APP_PASSWORD_DOMAINS[domain]
-        renderFields(extraContainer, [
-          {
-            key: `password_${idx}`,
-            label: info.label,
-            type: 'password',
-            helpUrl: info.helpUrl,
-            helpText: info.helpText
-          }
-        ])
-      } else {
-        renderFields(extraContainer, [
-          { key: `password_${idx}`, label: 'Password', type: 'password' },
-          {
-            key: `imap_${idx}`,
-            label: 'IMAP Host',
-            type: 'text',
-            placeholder: 'imap.example.com',
-            required: false,
-            helpText: 'Optional. Leave empty for auto-detection.'
-          }
-        ])
-      }
+      renderAccountExtraFields(extraContainer, domain, idx)
       submitBtn.disabled = false
     })
 
@@ -257,7 +265,7 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
         )
         document.getElementById('setup-form').style.display = 'none'
       }
-    } catch (err) {
+    } catch (_err) {
       skipBtn.disabled = false
       skipBtn.textContent = 'Skip Setup (use defaults)'
     }
