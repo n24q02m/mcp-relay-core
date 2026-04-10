@@ -54,6 +54,8 @@ __all__ = [
     "export_public_key",
     "generate_key_pair",
     "import_public_key",
+    "export_private_key",
+    "import_private_key",
     "encrypt",
     "RelaySession",
     "create_session",

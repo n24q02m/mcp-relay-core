@@ -62,15 +62,15 @@ jobs:
       - uses: python-semantic-release/python-semantic-release@350c48fcb3ffcdfd2e0a235206bc2ecea6b69df0 # v10
         id: release
         with:
-          github_token: ${{ secrets.GH_PAT }}
-          config_file: packages/core-py/semantic-release.toml
+          github_token: ${{ steps.app-token.outputs.token }}
+          config_file: semantic-release.toml
           prerelease: ${{ inputs.release_type == 'beta' }}
           prerelease_token: beta
 
       - uses: python-semantic-release/publish-action@310a9983a0ae878b29f3aac778d7c77c1db27378 # v10
         if: steps.release.outputs.released == 'true'
         with:
-          github_token: ${{ secrets.GH_PAT }}
+          github_token: ${{ steps.app-token.outputs.token }}
           tag: ${{ steps.release.outputs.tag }}
 
   # ============================================================================
@@ -152,17 +152,10 @@ jobs:
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
 
       - name: Build and publish
-        env:
-          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
-          VERSION: ${{ needs.release.outputs.version }}
         run: |
           cd packages/core-py
-          if curl -s -f "https://pypi.org/pypi/mcp-relay-core/$VERSION/json" > /dev/null 2>&1; then
-            echo "mcp-relay-core@$VERSION already published, skipping"
-          else
-            uv build
-            uv publish
-          fi
+          uv build
+          uv publish
 
   # ============================================================================
   # Build Docker (relay-server only)
