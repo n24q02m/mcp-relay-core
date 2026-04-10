@@ -2,6 +2,7 @@
 
 import datetime
 from pathlib import Path
+from typing import Any
 
 import jwt
 from cryptography.hazmat.primitives import serialization
@@ -18,8 +19,8 @@ class JWTIssuer:
         self.private_key_path = self.keys_dir / f"{server_name}_private.pem"
         self.public_key_path = self.keys_dir / f"{server_name}_public.pem"
 
-        self.private_key = None
-        self.public_key = None
+        self.private_key: Any = None
+        self.public_key: Any = None
         self._kid = "key-1"
         self._load_or_generate_keys()
 
