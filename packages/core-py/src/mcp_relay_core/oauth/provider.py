@@ -90,7 +90,7 @@ class OAuthProvider:
         session = await create_session(
             self.relay_base_url,
             self.server_name,
-            self.relay_schema,
+            self.relay_schema, # type: ignore
             oauth_state={
                 "clientId": client_id,
                 "redirectUri": redirect_uri,
