@@ -146,3 +146,29 @@ describe('exportConfig + importConfig', () => {
     expect(await readConfig('remote-server')).toEqual({ key: 'remote-val' })
   }, 60000)
 })
+
+describe('setConfigPath', () => {
+  it('overrides the config path', async () => {
+    const customPath = join(tempDir, 'custom-config.enc')
+    setConfigPath(customPath)
+
+    await writeConfig('custom', { foo: 'bar' })
+
+    const { existsSync } = await import('node:fs')
+    expect(existsSync(customPath)).toBe(true)
+    // The path set in beforeEach should not have been used for this write
+    expect(existsSync(join(tempDir, 'config.enc'))).toBe(false)
+
+    const config = await readConfig('custom')
+    expect(config).toEqual({ foo: 'bar' })
+  })
+
+  it('can be reset to null', async () => {
+    const customPath = join(tempDir, 'custom-reset.enc')
+    setConfigPath(customPath)
+    expect(setConfigPath(null)).toBeUndefined()
+
+    // We don't verify the default path behavior here to avoid writing to real config dirs,
+    // but we've exercised the setter with null.
+  })
+})

@@ -1,9 +1,11 @@
 {
   "lockfileVersion": 1,
-  "configVersion": 1,
   "workspaces": {
     "": {
       "name": "mcp-relay-core",
+      "dependencies": {
+        "@types/better-sqlite3": "^7.6.13",
+      },
       "devDependencies": {
         "@playwright/test": "^1.59.1",
       },

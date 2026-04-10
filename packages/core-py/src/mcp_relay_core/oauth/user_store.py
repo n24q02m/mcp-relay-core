@@ -35,8 +35,8 @@ class SqliteUserStore(IUserCredentialStore):
 
         # Ensure directory exists with strict permissions
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        if self.db_path.parent.exists() and os.name != 'nt':
-            os.chmod(self.db_path.parent, 0o700)
+        if self.db_path.parent.exists() and os.name != "nt":
+            os.chmod(self.db_path.parent, 0o700)  # nosemgrep
 
         self._init_db()
 
@@ -69,6 +69,7 @@ class SqliteUserStore(IUserCredentialStore):
 
     def save_credentials(self, user_id: str, config: dict) -> None:
         import time
+
         now = int(time.time())
         json_str = json.dumps(config)
         encrypted = self._encrypt(json_str)
@@ -82,14 +83,13 @@ class SqliteUserStore(IUserCredentialStore):
                     encrypted_config=excluded.encrypted_config,
                     updated_at=excluded.updated_at
                 """,
-                (user_id, encrypted, now, now)
+                (user_id, encrypted, now, now),
             )
 
     def get_credentials(self, user_id: str) -> dict | None:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.execute(
-                "SELECT encrypted_config FROM users WHERE user_id = ?",
-                (user_id,)
+                "SELECT encrypted_config FROM users WHERE user_id = ?", (user_id,)
             )
             row = cursor.fetchone()
 
