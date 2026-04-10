@@ -30,10 +30,14 @@ export function renderFields(container, fields) {
       help.textContent = field.helpText
       div.appendChild(help)
     }
-    if (field.helpUrl) {
+    // Security enhancement: Validate URL scheme to prevent javascript: XSS
+    if (field.helpUrl && (field.helpUrl.startsWith('http://') || field.helpUrl.startsWith('https://'))) {
       const link = document.createElement('a')
       link.href = field.helpUrl
       link.target = '_blank'
+      // Security enhancement: Prevent target="_blank" tabnabbing attacks
+      link.rel = 'noopener noreferrer'
+      link.setAttribute('aria-label', `How to get ${field.label} (opens in a new tab)`)
       link.textContent = 'How to get this?'
       link.className = 'help-link'
       div.appendChild(link)
@@ -114,10 +118,14 @@ export function renderMessage(container, message) {
     div.appendChild(title)
 
     const oauthUrl = message.data?.url || message.data?.verification_uri
-    if (oauthUrl) {
+    // Security enhancement: Validate URL scheme to prevent javascript: XSS
+    if (oauthUrl && (oauthUrl.startsWith('http://') || oauthUrl.startsWith('https://'))) {
       const link = document.createElement('a')
       link.href = oauthUrl
       link.target = '_blank'
+      // Security enhancement: Prevent target="_blank" tabnabbing attacks
+      link.rel = 'noopener noreferrer'
+      link.setAttribute('aria-label', 'Open authorization URL (opens in a new tab)')
       link.textContent = oauthUrl
       link.style.cssText = 'display: block; margin: 8px 0; color: #3498db;'
       div.appendChild(link)

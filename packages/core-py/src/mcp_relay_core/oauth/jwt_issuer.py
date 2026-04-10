@@ -18,8 +18,8 @@ class JWTIssuer:
         self.private_key_path = self.keys_dir / f"{server_name}_private.pem"
         self.public_key_path = self.keys_dir / f"{server_name}_public.pem"
 
-        self.private_key = None
-        self.public_key = None
+        self.private_key: rsa.RSAPrivateKey | None = None
+        self.public_key: rsa.RSAPublicKey | None = None
         self._kid = "key-1"
         self._load_or_generate_keys()
 
@@ -28,11 +28,13 @@ class JWTIssuer:
 
         if self.private_key_path.exists() and self.public_key_path.exists():
             with open(self.private_key_path, "rb") as f:
-                self.private_key = serialization.load_pem_private_key(
-                    f.read(), password=None
-                )
+                pk = serialization.load_pem_private_key(f.read(), password=None)
+                assert isinstance(pk, rsa.RSAPrivateKey)
+                self.private_key = pk
             with open(self.public_key_path, "rb") as f:
-                self.public_key = serialization.load_pem_public_key(f.read())
+                pubk = serialization.load_pem_public_key(f.read())
+                assert isinstance(pubk, rsa.RSAPublicKey)
+                self.public_key = pubk
         else:
             self.private_key = rsa.generate_private_key(
                 public_exponent=65537,
@@ -62,13 +64,15 @@ class JWTIssuer:
 
     def get_jwks(self) -> dict:
         """Return JWKS payload for /.well-known/jwks.json"""
+        assert self.public_key is not None
         pn = self.public_key.public_numbers()
 
         def to_base64url(val: int) -> str:
-            val_bytes = val.to_bytes((val.bit_length() + 7) // 8, byteorder='big')
+            val_bytes = val.to_bytes((val.bit_length() + 7) // 8, byteorder="big")
             # Custom base64url without padding
             import base64
-            return base64.urlsafe_b64encode(val_bytes).rstrip(b'=').decode('ascii')
+
+            return base64.urlsafe_b64encode(val_bytes).rstrip(b"=").decode("ascii")
 
         return {
             "keys": [
@@ -93,15 +97,18 @@ class JWTIssuer:
             "iat": now,
             "exp": now + datetime.timedelta(seconds=expires_in_seconds),
         }
+
+        assert self.private_key is not None
+
         return jwt.encode(
-            payload,
-            self.private_key,
-            algorithm="RS256",
-            headers={"kid": self._kid}
+            payload, self.private_key, algorithm="RS256", headers={"kid": self._kid}
         )
 
     def verify_access_token(self, token: str) -> dict:
         """Verify JWT and return payload. Raises standard PyJWT exceptions on failure."""
+
+        assert self.public_key is not None
+
         return jwt.decode(
             token,
             self.public_key,
