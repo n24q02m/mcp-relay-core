@@ -11,10 +11,13 @@ import hmac
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Protocol, cast
+
+from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
 
 from mcp_relay_core.crypto.ecdh import export_private_key, import_private_key
 from mcp_relay_core.relay.client import RelaySession, create_session, poll_for_result
+from mcp_relay_core.schema.types import RelayConfigSchema
 
 from .jwt_issuer import JWTIssuer
 
@@ -66,7 +69,7 @@ class OAuthProvider:
         self,
         server_name: str,
         relay_base_url: str,
-        relay_schema: dict,
+        relay_schema: RelayConfigSchema,
         jwt_issuer: JWTIssuer,
         cache: IOAuthSessionCache | None = None,
     ):
@@ -155,7 +158,7 @@ class OAuthProvider:
         relay_session = RelaySession(
             session_id=pre_auth.session_id,
             private_key=import_private_key(pre_auth.private_key_b64),
-            public_key=None,  # Not needed for decryption
+            public_key=cast(EllipticCurvePublicKey, None),  # Not needed for decryption
             passphrase=pre_auth.passphrase,
             relay_url="",
         )

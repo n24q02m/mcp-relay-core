@@ -5,6 +5,7 @@ import base64
 import json
 import secrets
 from dataclasses import dataclass
+from typing import Any
 from urllib.parse import quote
 
 import httpx
@@ -62,6 +63,7 @@ async def create_session(
     relay_base_url: str,
     server_name: str,
     schema: RelayConfigSchema,
+    oauth_state: dict[str, Any] | None = None,
 ) -> RelaySession:
     """Create a new relay session.
 
@@ -69,6 +71,7 @@ async def create_session(
         relay_base_url: Base URL of the relay server.
         server_name: Server identifier.
         schema: Relay config schema for the setup form.
+        oauth_state: Optional OAuth 2.1 state for the provider flow.
 
     Returns:
         RelaySession with session ID, keys, passphrase, and relay URL.
@@ -80,14 +83,18 @@ async def create_session(
     private_key, public_key = generate_key_pair()
     passphrase = generate_passphrase()
 
+    payload: dict[str, Any] = {
+        "sessionId": session_id,
+        "serverName": server_name,
+        "schema": dict(schema),
+    }
+    if oauth_state:
+        payload["oauthState"] = oauth_state
+
     async with httpx.AsyncClient() as client:
         response = await client.post(
             f"{relay_base_url}/api/sessions",
-            json={
-                "sessionId": session_id,
-                "serverName": server_name,
-                "schema": dict(schema),
-            },
+            json=payload,
         )
         if response.status_code >= 400:
             msg = f"Relay session creation failed: {response.status_code}"
@@ -113,100 +120,108 @@ async def poll_for_result(
     interval_s: float = 2.0,
     timeout_s: float = 600.0,
 ) -> dict[str, str]:
-    """Poll the relay server for encrypted credentials.
+    """Poll the relay server for the result.
 
     Args:
         relay_base_url: Base URL of the relay server.
-        session: Active relay session.
+        session: Active RelaySession.
         interval_s: Polling interval in seconds.
-        timeout_s: Total timeout in seconds.
+        timeout_s: Maximum time to poll in seconds.
 
     Returns:
-        Decrypted credentials dict.
+        Decrypted configuration dictionary.
 
     Raises:
-        RuntimeError: On session expiry, unexpected status, or timeout.
+        TimeoutError: If result is not available within timeout.
+        RuntimeError: If session is skipped or server returns error.
     """
-    import time
+    deadline = asyncio.get_event_loop().time() + timeout_s
 
-    deadline = time.monotonic() + timeout_s
-
-    async with httpx.AsyncClient() as client:
-        while time.monotonic() < deadline:
-            response = await client.get(
-                f"{relay_base_url}/api/sessions/{session.session_id}"
-            )
+    while asyncio.get_event_loop().time() < deadline:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{relay_base_url}/api/sessions/{session.session_id}")
 
             if response.status_code == 200:
                 body = response.json()
 
                 if body.get("status") == "skipped":
-                    # Cleanup session (best effort)
-                    try:
-                        await client.delete(
-                            f"{relay_base_url}/api/sessions/{session.session_id}"
-                        )
-                    except Exception:
-                        pass
-                    msg = "RELAY_SKIPPED"
-                    raise RuntimeError(msg)
+                    await _cleanup_skipped_session(relay_base_url, session.session_id)
+                    raise RuntimeError("RELAY_SKIPPED")
 
-                result = body.get("result", body)
-                browser_pub = import_public_key(result["browserPub"])
-                shared_secret = derive_shared_secret(session.private_key, browser_pub)
-                aes_key = derive_aes_key(shared_secret, session.passphrase)
-
-                ciphertext = base64.b64decode(result["ciphertext"])
-                iv = base64.b64decode(result["iv"])
-                tag = base64.b64decode(result["tag"])
-
-                plaintext = decrypt(aes_key, ciphertext, iv, tag)
-
-                # Don't delete session — keep alive for bidirectional messaging.
-                # Session auto-expires via TTL (10 min).
-
-                return json.loads(plaintext)
+                return await _decrypt_relay_result(body, session)
 
             if response.status_code == 404:
-                msg = "Session expired or not found"
-                raise RuntimeError(msg)
-
+                raise RuntimeError("Session expired or not found")
             if response.status_code != 202:
-                msg = f"Unexpected status: {response.status_code}"
-                raise RuntimeError(msg)
+                raise RuntimeError(f"Unexpected status: {response.status_code}")
 
-            await asyncio.sleep(interval_s)
+        await asyncio.sleep(interval_s)
 
-    msg = "Relay setup timed out"
-    raise RuntimeError(msg)
+    raise RuntimeError("Relay setup timed out")
+
+
+async def _cleanup_skipped_session(relay_base_url: str, session_id: str) -> None:
+    """Helper to delete a skipped session."""
+    try:
+        async with httpx.AsyncClient() as client:
+            await client.delete(f"{relay_base_url}/api/sessions/{session_id}")
+    except Exception:
+        pass
+
+
+async def _decrypt_relay_result(body: dict, session: RelaySession) -> dict[str, str]:
+    """Helper to decrypt the encrypted result from the relay server."""
+    result = body.get("result") or body
+    browser_pub = result["browserPub"]
+    ciphertext_b64 = result["ciphertext"]
+    iv_b64 = result["iv"]
+    tag_b64 = result["tag"]
+
+    browser_key = import_public_key(browser_pub)
+    shared_secret = derive_shared_secret(session.private_key, browser_key)
+    aes_key = derive_aes_key(shared_secret, session.passphrase)
+
+    plaintext = decrypt(
+        aes_key,
+        base64.b64decode(ciphertext_b64),
+        base64.b64decode(iv_b64),
+        base64.b64decode(tag_b64),
+    )
+
+    return json.loads(plaintext)
 
 
 async def send_message(
     relay_base_url: str,
     session_id: str,
-    message: dict,
+    message_type: str,
+    text: str,
+    data: dict[str, Any] | None = None,
 ) -> str:
-    """Push a message from server to browser via the relay.
+    """Send a message to the browser via relay server.
 
     Args:
         relay_base_url: Base URL of the relay server.
         session_id: Active session ID.
-        message: Dict with 'type', 'text', and optional 'data'.
+        message_type: Message type identifier.
+        text: Message text.
+        data: Optional structured data.
 
     Returns:
-        The generated message ID.
-
-    Raises:
-        RuntimeError: If the relay returns a non-2xx status.
+        Created message ID.
     """
+    payload: dict[str, Any] = {"type": message_type, "text": text}
+    if data:
+        payload["data"] = data
+
     async with httpx.AsyncClient() as client:
         response = await client.post(
             f"{relay_base_url}/api/sessions/{session_id}/messages",
-            json=message,
+            json=payload,
         )
         if response.status_code >= 400:
-            msg = f"Failed to send message: {response.status_code}"
-            raise RuntimeError(msg)
+            raise RuntimeError(f"Failed to send message: {response.status_code}")
+
         return response.json()["id"]
 
 
@@ -217,40 +232,37 @@ async def poll_for_responses(
     interval_s: float = 2.0,
     timeout_s: float = 300.0,
 ) -> str:
-    """Poll the relay for a browser response to a specific message.
+    """Poll for a response to a specific message.
 
     Args:
         relay_base_url: Base URL of the relay server.
         session_id: Active session ID.
-        message_id: The message ID to wait for a response to.
+        message_id: Message ID to wait for.
         interval_s: Polling interval in seconds.
-        timeout_s: Total timeout in seconds.
+        timeout_s: Maximum time to poll in seconds.
 
     Returns:
-        The response value string.
+        Response value string.
 
     Raises:
-        RuntimeError: On timeout or request failure.
+        TimeoutError: If response is not received within timeout.
     """
-    import time
+    deadline = asyncio.get_event_loop().time() + timeout_s
 
-    deadline = time.monotonic() + timeout_s
-
-    async with httpx.AsyncClient() as client:
-        while time.monotonic() < deadline:
+    while asyncio.get_event_loop().time() < deadline:
+        async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{relay_base_url}/api/sessions/{session_id}/responses"
             )
             if response.status_code >= 400:
-                msg = f"Failed to poll responses: {response.status_code}"
-                raise RuntimeError(msg)
+                raise RuntimeError(f"Failed to poll responses: {response.status_code}")
 
             body = response.json()
-            for resp in body.get("responses", []):
-                if resp.get("messageId") == message_id:
-                    return resp["value"]
+            responses = body.get("responses", [])
+            for r in responses:
+                if r.get("messageId") == message_id:
+                    return r.get("value")
 
-            await asyncio.sleep(interval_s)
+        await asyncio.sleep(interval_s)
 
-    msg = "Timed out waiting for response"
-    raise RuntimeError(msg)
+    raise RuntimeError("Timed out waiting for response")
