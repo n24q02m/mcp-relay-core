@@ -176,7 +176,7 @@ class TestPollForResult:
         # Browser-side encryption
         shared_secret = derive_shared_secret(browser_priv, cli_pub)
         aes_key = derive_aes_key(shared_secret, passphrase)
-        credentials = {"token": "secret-123", "api_key": "key-456"}
+        credentials = {"token": "test-token-123", "api_key": "test-key-456"}
         ciphertext, iv, tag = encrypt(aes_key, json.dumps(credentials))
 
         browser_pub_b64 = export_public_key(browser_pub)
