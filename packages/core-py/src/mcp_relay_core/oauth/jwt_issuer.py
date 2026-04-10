@@ -2,6 +2,7 @@
 
 import datetime
 from pathlib import Path
+from typing import Any
 
 import jwt
 from cryptography.hazmat.primitives import serialization
@@ -18,8 +19,8 @@ class JWTIssuer:
         self.private_key_path = self.keys_dir / f"{server_name}_private.pem"
         self.public_key_path = self.keys_dir / f"{server_name}_public.pem"
 
-        self.private_key = None
-        self.public_key = None
+        self.private_key: rsa.RSAPrivateKey | None = None
+        self.public_key: rsa.RSAPublicKey | None = None
         self._kid = "key-1"
         self._load_or_generate_keys()
 
@@ -28,17 +29,26 @@ class JWTIssuer:
 
         if self.private_key_path.exists() and self.public_key_path.exists():
             with open(self.private_key_path, "rb") as f:
-                self.private_key = serialization.load_pem_private_key(
+                private_key = serialization.load_pem_private_key(
                     f.read(), password=None
                 )
+                if not isinstance(private_key, rsa.RSAPrivateKey):
+                    raise RuntimeError("Loaded key is not an RSA private key")
+                self.private_key = private_key
             with open(self.public_key_path, "rb") as f:
-                self.public_key = serialization.load_pem_public_key(f.read())
+                public_key = serialization.load_pem_public_key(f.read())
+                if not isinstance(public_key, rsa.RSAPublicKey):
+                    raise RuntimeError("Loaded key is not an RSA public key")
+                self.public_key = public_key
         else:
             self.private_key = rsa.generate_private_key(
                 public_exponent=65537,
                 key_size=2048,
             )
-            self.public_key = self.private_key.public_key()
+            public_key = self.private_key.public_key()
+            if not isinstance(public_key, rsa.RSAPublicKey):
+                raise RuntimeError("Generated key is not an RSA public key")
+            self.public_key = public_key
 
             with open(self.private_key_path, "wb") as f:
                 f.write(
@@ -60,8 +70,10 @@ class JWTIssuer:
             self.private_key_path.chmod(0o600)
             self.public_key_path.chmod(0o644)
 
-    def get_jwks(self) -> dict:
+    def get_jwks(self) -> dict[str, list[dict[str, Any]]]:
         """Return JWKS payload for /.well-known/jwks.json"""
+        if self.public_key is None:
+            raise RuntimeError("JWTIssuer not initialized")
         pn = self.public_key.public_numbers()
 
         def to_base64url(val: int) -> str:
@@ -86,6 +98,8 @@ class JWTIssuer:
 
     def issue_access_token(self, sub: str, expires_in_seconds: int = 3600) -> str:
         """Issue an RS256 JWT access token."""
+        if self.private_key is None:
+            raise RuntimeError("JWTIssuer not initialized")
         now = datetime.datetime.now(datetime.UTC)
         payload = {
             "iss": self.server_name,
@@ -98,8 +112,10 @@ class JWTIssuer:
             payload, self.private_key, algorithm="RS256", headers={"kid": self._kid}
         )
 
-    def verify_access_token(self, token: str) -> dict:
+    def verify_access_token(self, token: str) -> dict[str, Any]:
         """Verify JWT and return payload. Raises standard PyJWT exceptions on failure."""
+        if self.public_key is None:
+            raise RuntimeError("JWTIssuer not initialized")
         return jwt.decode(
             token,
             self.public_key,

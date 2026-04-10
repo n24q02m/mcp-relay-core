@@ -11,10 +11,13 @@ import hmac
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Any, Protocol, cast
+
+from cryptography.hazmat.primitives.asymmetric import ec
 
 from mcp_relay_core.crypto.ecdh import export_private_key, import_private_key
 from mcp_relay_core.relay.client import RelaySession, create_session, poll_for_result
+from mcp_relay_core.schema.types import RelayConfigSchema
 
 from .jwt_issuer import JWTIssuer
 
@@ -66,7 +69,7 @@ class OAuthProvider:
         self,
         server_name: str,
         relay_base_url: str,
-        relay_schema: dict,
+        relay_schema: dict[str, Any],
         jwt_issuer: JWTIssuer,
         cache: IOAuthSessionCache | None = None,
     ):
@@ -90,7 +93,7 @@ class OAuthProvider:
         session = await create_session(
             self.relay_base_url,
             self.server_name,
-            self.relay_schema,
+            cast(RelayConfigSchema, self.relay_schema),
             oauth_state={
                 "clientId": client_id,
                 "redirectUri": redirect_uri,
@@ -119,8 +122,8 @@ class OAuthProvider:
         self,
         code: str,
         code_verifier: str,
-        user_id_extractor: Callable[[dict], str],
-    ) -> tuple[str, dict]:
+        user_id_extractor: Callable[[dict[str, Any]], str],
+    ) -> tuple[str, dict[str, Any]]:
         """
         Exchange the authorization code (which is the relay session_id)
         for an access_token. PKCE verification is performed.
@@ -151,11 +154,17 @@ class OAuthProvider:
         else:
             raise ValueError("unsupported_challenge_method")
 
+        # dummy public key to satisfy RelaySession type (not needed for decryption)
+        dummy_private_key = ec.generate_private_key(ec.SECP256R1())
+        dummy_public_key = dummy_private_key.public_key()
+        if not isinstance(dummy_public_key, ec.EllipticCurvePublicKey):
+            raise RuntimeError("Failed to generate dummy public key")
+
         # reconstruct RelaySession to decrypt
         relay_session = RelaySession(
             session_id=pre_auth.session_id,
             private_key=import_private_key(pre_auth.private_key_b64),
-            public_key=None,  # Not needed for decryption
+            public_key=dummy_public_key,
             passphrase=pre_auth.passphrase,
             relay_url="",
         )

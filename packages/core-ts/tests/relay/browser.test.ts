@@ -1,19 +1,32 @@
+import { execFile } from 'node:child_process'
+import { readFile } from 'node:fs/promises'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { tryOpenBrowser } from '../../src/relay/browser.js'
+
+// Define types for the mock to avoid Semgrep findings on 'any'
+type ExecFileCallback = (err: Error | null, stdout: string, stderr: string) => void
 
 // Mock child_process and fs/promises before importing the module
 vi.mock('node:child_process', () => ({
-  execFile: vi.fn((_cmd: string, _args: string[], cb: (err: Error | null) => void) => {
-    cb(null)
+  execFile: vi.fn((_cmd: string, _args: string[], cb: ExecFileCallback) => {
+    if (typeof cb === 'function') {
+      cb(null, '', '')
+    }
+    // Return a dummy object that matches ChildProcess enough for the promisify wrapper
+    return {
+      on: vi.fn(),
+      unref: vi.fn(),
+      stdin: {},
+      stdout: {},
+      stderr: {},
+      kill: vi.fn()
+    }
   })
 }))
 
 vi.mock('node:fs/promises', () => ({
   readFile: vi.fn().mockRejectedValue(new Error('ENOENT'))
 }))
-
-import { execFile } from 'node:child_process'
-import { readFile } from 'node:fs/promises'
-import { tryOpenBrowser } from '../../src/relay/browser.js'
 
 describe('tryOpenBrowser', () => {
   afterEach(() => {
@@ -98,13 +111,13 @@ describe('tryOpenBrowser', () => {
       vi.stubGlobal('process', { ...process, platform: 'linux' })
       vi.mocked(readFile).mockResolvedValue('WSL2 detected')
       vi.mocked(execFile).mockImplementation((cmd, _args, cb) => {
-        const callback = cb as (err: Error | null) => void
+        const callback = cb as ExecFileCallback
         if (cmd === 'wslview') {
-          callback(new Error('not found'))
+          callback(new Error('not found'), '', '')
         } else {
-          callback(null)
+          callback(null, '', '')
         }
-        return {} as unknown as ReturnType<typeof execFile>
+        return { on: vi.fn(), unref: vi.fn() } as unknown as ReturnType<typeof execFile>
       })
 
       const url = 'https://example.com'
@@ -119,13 +132,13 @@ describe('tryOpenBrowser', () => {
       vi.stubGlobal('process', { ...process, platform: 'linux' })
       vi.mocked(readFile).mockResolvedValue('microsoft')
       vi.mocked(execFile).mockImplementation((cmd, _args, cb) => {
-        const callback = cb as (err: Error | null) => void
+        const callback = cb as ExecFileCallback
         if (cmd === 'wslview' || cmd === 'rundll32.exe') {
-          callback(new Error('fail'))
+          callback(new Error('fail'), '', '')
         } else {
-          callback(null)
+          callback(null, '', '')
         }
-        return {} as unknown as ReturnType<typeof execFile>
+        return { on: vi.fn(), unref: vi.fn() } as unknown as ReturnType<typeof execFile>
       })
 
       const url = 'https://example.com'
@@ -152,9 +165,9 @@ describe('tryOpenBrowser', () => {
       vi.stubGlobal('process', { ...process, platform: 'linux' })
       vi.mocked(readFile).mockRejectedValue(new Error('ENOENT'))
       vi.mocked(execFile).mockImplementation((_cmd, _args, cb) => {
-        const callback = cb as (err: Error | null) => void
-        callback(new Error('failed'))
-        return {} as unknown as ReturnType<typeof execFile>
+        const callback = cb as ExecFileCallback
+        callback(new Error('failed'), '', '')
+        return { on: vi.fn(), unref: vi.fn() } as unknown as ReturnType<typeof execFile>
       })
 
       const result = await tryOpenBrowser('https://example.com')
