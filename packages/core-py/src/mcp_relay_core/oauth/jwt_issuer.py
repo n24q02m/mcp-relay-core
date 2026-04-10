@@ -65,10 +65,11 @@ class JWTIssuer:
         pn = self.public_key.public_numbers()
 
         def to_base64url(val: int) -> str:
-            val_bytes = val.to_bytes((val.bit_length() + 7) // 8, byteorder='big')
+            val_bytes = val.to_bytes((val.bit_length() + 7) // 8, byteorder="big")
             # Custom base64url without padding
             import base64
-            return base64.urlsafe_b64encode(val_bytes).rstrip(b'=').decode('ascii')
+
+            return base64.urlsafe_b64encode(val_bytes).rstrip(b"=").decode("ascii")
 
         return {
             "keys": [
@@ -94,10 +95,7 @@ class JWTIssuer:
             "exp": now + datetime.timedelta(seconds=expires_in_seconds),
         }
         return jwt.encode(
-            payload,
-            self.private_key,
-            algorithm="RS256",
-            headers={"kid": self._kid}
+            payload, self.private_key, algorithm="RS256", headers={"kid": self._kid}
         )
 
     def verify_access_token(self, token: str) -> dict:
