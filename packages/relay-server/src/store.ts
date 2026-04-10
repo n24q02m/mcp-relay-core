@@ -1,3 +1,5 @@
+import { PriorityQueue } from './priority-queue.js'
+
 export interface SessionResult {
   browserPub: string
   ciphertext: string
@@ -44,6 +46,7 @@ const MAX_RESPONSES_PER_SESSION = 50
 
 const sessions = new Map<string, Session>()
 const ipCounts = new Map<string, number>()
+const expirationQueue = new PriorityQueue<string>()
 let cleanupTimer: ReturnType<typeof setInterval> | null = null
 
 function decrementIpCount(ip: string): void {
@@ -81,6 +84,7 @@ export function createSession(
     return null
   }
 
+  const now = Date.now()
   const session: Session = {
     id,
     serverName,
@@ -88,12 +92,13 @@ export function createSession(
     oauthState,
     result: null,
     skipped: false,
-    createdAt: Date.now(),
+    createdAt: now,
     sourceIp,
     messages: [],
     responses: []
   }
   sessions.set(id, session)
+  expirationQueue.push(id, now + SESSION_TTL_MS)
   incrementIpCount(sourceIp)
   return session
 }
@@ -160,11 +165,22 @@ function countSessionsByIp(ip: string): number {
 
 function cleanup(): void {
   const now = Date.now()
-  for (const [id, session] of sessions) {
-    if (now - session.createdAt > SESSION_TTL_MS) {
-      decrementIpCount(session.sourceIp)
-      sessions.delete(id)
+  while (true) {
+    const next = expirationQueue.peek()
+    if (!next || next.priority > now) break
+
+    expirationQueue.pop()
+    const session = sessions.get(next.value)
+    if (session) {
+      // session exists, check if it's truly expired
+      // (although with priority queue it should be)
+      if (now - session.createdAt > SESSION_TTL_MS) {
+        decrementIpCount(session.sourceIp)
+        sessions.delete(next.value)
+      }
     }
+    // if session doesn't exist, it was already deleted manually,
+    // so we just continue to clear it from the queue.
   }
 }
 
@@ -185,4 +201,5 @@ export function stopCleanup(): void {
 export function clearAllSessions(): void {
   sessions.clear()
   ipCounts.clear()
+  expirationQueue.clear()
 }
