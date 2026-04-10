@@ -1,9 +1,11 @@
+import { execFile } from 'node:child_process'
+import { readFile } from 'node:fs/promises'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 // Mock child_process and fs/promises before importing the module
 vi.mock('node:child_process', () => ({
   execFile: vi.fn((_cmd: string, _args: string[], cb: (err: Error | null) => void) => {
-    cb(new Error('no display'))
+    cb(null)
   })
 }))
 
@@ -11,13 +13,12 @@ vi.mock('node:fs/promises', () => ({
   readFile: vi.fn().mockRejectedValue(new Error('ENOENT'))
 }))
 
-import { execFile } from 'node:child_process'
-import { readFile } from 'node:fs/promises'
 import { tryOpenBrowser } from '../../src/relay/browser.js'
 
 describe('tryOpenBrowser', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.clearAllMocks()
   })
 
   describe('URL validation', () => {
@@ -105,11 +106,13 @@ describe('tryOpenBrowser', () => {
 
   describe('security', () => {
     it('handles shell metacharacters safely in URL', async () => {
-      vi.mocked(execFile).mockClear()
       vi.mocked(readFile).mockResolvedValue('Linux version 5.15.0-microsoft-standard-WSL2')
 
-      // Use a more forceful stub for platform
-      vi.stubGlobal('process', { ...process, platform: 'linux' })
+      // Use Object.defineProperty to bypass read-only restriction on process.platform
+      Object.defineProperty(process, 'platform', {
+        value: 'linux',
+        configurable: true
+      })
 
       const maliciousUrl = 'https://example.com/$(id)'
       await tryOpenBrowser(maliciousUrl)
