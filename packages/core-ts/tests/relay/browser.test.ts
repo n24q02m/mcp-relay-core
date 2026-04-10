@@ -104,7 +104,7 @@ describe('tryOpenBrowser', () => {
         } else {
           callback(null)
         }
-        return {} as ReturnType<typeof execFile>
+        return {} as unknown as ReturnType<typeof execFile>
       })
 
       const url = 'https://example.com'
@@ -125,7 +125,7 @@ describe('tryOpenBrowser', () => {
         } else {
           callback(null)
         }
-        return {} as ReturnType<typeof execFile>
+        return {} as unknown as ReturnType<typeof execFile>
       })
 
       const url = 'https://example.com'
@@ -154,7 +154,7 @@ describe('tryOpenBrowser', () => {
       vi.mocked(execFile).mockImplementation((_cmd, _args, cb) => {
         const callback = cb as (err: Error | null) => void
         callback(new Error('failed'))
-        return {} as ReturnType<typeof execFile>
+        return {} as unknown as ReturnType<typeof execFile>
       })
 
       const result = await tryOpenBrowser('https://example.com')
