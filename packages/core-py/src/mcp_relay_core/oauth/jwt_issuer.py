@@ -2,16 +2,21 @@
 
 import datetime
 from pathlib import Path
+from typing import cast
 
 import jwt
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey, RSAPublicKey
 
 # Keys will be stored outside of the codebase to persist across server restarts
 DEFAULT_KEYS_DIR = Path.home() / ".mcp-relay" / "jwt-keys"
 
 
 class JWTIssuer:
+    private_key: RSAPrivateKey | None
+    public_key: RSAPublicKey | None
+
     def __init__(self, server_name: str, keys_dir: Path = DEFAULT_KEYS_DIR):
         self.server_name = server_name
         self.keys_dir = keys_dir
@@ -28,11 +33,14 @@ class JWTIssuer:
 
         if self.private_key_path.exists() and self.public_key_path.exists():
             with open(self.private_key_path, "rb") as f:
-                self.private_key = serialization.load_pem_private_key(
-                    f.read(), password=None
+                self.private_key = cast(
+                    RSAPrivateKey,
+                    serialization.load_pem_private_key(f.read(), password=None),
                 )
             with open(self.public_key_path, "rb") as f:
-                self.public_key = serialization.load_pem_public_key(f.read())
+                self.public_key = cast(
+                    RSAPublicKey, serialization.load_pem_public_key(f.read())
+                )
         else:
             self.private_key = rsa.generate_private_key(
                 public_exponent=65537,
@@ -62,13 +70,16 @@ class JWTIssuer:
 
     def get_jwks(self) -> dict:
         """Return JWKS payload for /.well-known/jwks.json"""
+        if not self.public_key:
+            raise RuntimeError("JWTIssuer not initialized")
         pn = self.public_key.public_numbers()
 
         def to_base64url(val: int) -> str:
-            val_bytes = val.to_bytes((val.bit_length() + 7) // 8, byteorder='big')
+            val_bytes = val.to_bytes((val.bit_length() + 7) // 8, byteorder="big")
             # Custom base64url without padding
             import base64
-            return base64.urlsafe_b64encode(val_bytes).rstrip(b'=').decode('ascii')
+
+            return base64.urlsafe_b64encode(val_bytes).rstrip(b"=").decode("ascii")
 
         return {
             "keys": [
@@ -85,6 +96,8 @@ class JWTIssuer:
 
     def issue_access_token(self, sub: str, expires_in_seconds: int = 3600) -> str:
         """Issue an RS256 JWT access token."""
+        if not self.private_key:
+            raise RuntimeError("JWTIssuer not initialized")
         now = datetime.datetime.now(datetime.UTC)
         payload = {
             "iss": self.server_name,
@@ -94,14 +107,13 @@ class JWTIssuer:
             "exp": now + datetime.timedelta(seconds=expires_in_seconds),
         }
         return jwt.encode(
-            payload,
-            self.private_key,
-            algorithm="RS256",
-            headers={"kid": self._kid}
+            payload, self.private_key, algorithm="RS256", headers={"kid": self._kid}
         )
 
     def verify_access_token(self, token: str) -> dict:
         """Verify JWT and return payload. Raises standard PyJWT exceptions on failure."""
+        if not self.public_key:
+            raise RuntimeError("JWTIssuer not initialized")
         return jwt.decode(
             token,
             self.public_key,
