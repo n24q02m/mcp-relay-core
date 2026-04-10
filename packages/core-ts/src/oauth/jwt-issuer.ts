@@ -16,8 +16,8 @@ export class JWTIssuer {
   private privateKeyPath: string
   private publicKeyPath: string
   private kid = 'key-1'
-  private privateKey: any | null = null
-  private publicKey: any | null = null
+  private privateKey: CryptoKey | null = null
+  private publicKey: CryptoKey | null = null
   private _initialized = false
 
   constructor(serverName: string, keysDir = DEFAULT_KEYS_DIR) {
@@ -35,15 +35,15 @@ export class JWTIssuer {
     if (existsSync(this.privateKeyPath) && existsSync(this.publicKeyPath)) {
       const privatePem = readFileSync(this.privateKeyPath, 'utf-8')
       const publicPem = readFileSync(this.publicKeyPath, 'utf-8')
-      this.privateKey = await jose.importPKCS8(privatePem, 'RS256')
-      this.publicKey = await jose.importSPKI(publicPem, 'RS256')
+      this.privateKey = (await jose.importPKCS8(privatePem, 'RS256')) as CryptoKey
+      this.publicKey = (await jose.importSPKI(publicPem, 'RS256')) as CryptoKey
     } else {
       const { publicKey, privateKey } = await jose.generateKeyPair('RS256', {
         modulusLength: 2048,
         extractable: true
       })
-      this.privateKey = privateKey
-      this.publicKey = publicKey
+      this.privateKey = privateKey as CryptoKey
+      this.publicKey = publicKey as CryptoKey
 
       const privatePem = await jose.exportPKCS8(privateKey)
       const publicPem = await jose.exportSPKI(publicKey)

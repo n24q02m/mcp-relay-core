@@ -13,7 +13,10 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Protocol
 
-from mcp_relay_core.crypto.ecdh import export_private_key, import_private_key, import_public_key
+from mcp_relay_core.crypto.ecdh import (
+    export_private_key,
+    import_private_key,
+)
 from mcp_relay_core.relay.client import RelaySession, create_session, poll_for_result
 
 from .jwt_issuer import JWTIssuer
@@ -155,7 +158,7 @@ class OAuthProvider:
         relay_session = RelaySession(
             session_id=pre_auth.session_id,
             private_key=import_private_key(pre_auth.private_key_b64),
-            public_key=None, # type: ignore
+            public_key=None,  # type: ignore
             passphrase=pre_auth.passphrase,
             relay_url="",
         )
