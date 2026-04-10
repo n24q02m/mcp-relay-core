@@ -63,6 +63,7 @@ async def create_session(
     relay_base_url: str,
     server_name: str,
     schema: RelayConfigSchema,
+    oauth_state: dict | None = None,
 ) -> RelaySession:
     """Create a new relay session.
 
@@ -70,6 +71,7 @@ async def create_session(
         relay_base_url: Base URL of the relay server.
         server_name: Server identifier.
         schema: Relay config schema for the setup form.
+        oauth_state: Optional OAuth state to include in the session.
 
     Returns:
         RelaySession with session ID, keys, passphrase, and relay URL.
@@ -88,6 +90,7 @@ async def create_session(
                 "sessionId": session_id,
                 "serverName": server_name,
                 "schema": dict(schema),
+                "oauthState": oauth_state,
             },
         )
         if response.status_code >= 400:
