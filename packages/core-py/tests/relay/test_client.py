@@ -17,9 +17,34 @@ from mcp_relay_core.relay.client import (
     RelaySession,
     create_session,
     generate_passphrase,
+    poll_for_responses,
     poll_for_result,
+    send_message,
 )
 from mcp_relay_core.relay.wordlist import WORDLIST
+
+
+def count_words_in_passphrase(passphrase: str) -> int:
+    sorted_words = sorted(WORDLIST, key=len, reverse=True)
+    remaining = passphrase
+    count = 0
+    while remaining:
+        matching_word = next(
+            (
+                w
+                for w in sorted_words
+                if remaining.startswith(f"{w}-") or remaining == w
+            ),
+            None,
+        )
+        if not matching_word:
+            break
+        count += 1
+        remaining = remaining[len(matching_word) :]
+        if remaining.startswith("-"):
+            remaining = remaining[1:]
+    assert remaining == ""  # Must match entirely
+    return count
 
 
 class TestWordlist:
@@ -37,35 +62,35 @@ class TestWordlist:
 
 
 class TestGeneratePassphrase:
-    def test_returns_non_empty_string(self):
+    def test_returns_4_words_by_default(self):
         passphrase = generate_passphrase()
-        assert isinstance(passphrase, str)
-        assert len(passphrase) > 0
-        # Note: can't simply split("-") to count words because some EFF words
-        # contain hyphens (e.g., "drop-down"). We verify via wordlist membership.
+        assert count_words_in_passphrase(passphrase) == 4
 
     def test_respects_custom_word_count(self):
         passphrase = generate_passphrase(6)
-        # Verify by matching against wordlist — account for hyphenated words
-        found = [w for w in WORDLIST if w in passphrase]
-        assert len(found) >= 6
+        assert count_words_in_passphrase(passphrase) == 6
 
     def test_only_uses_words_from_wordlist(self):
-        word_set = set(WORDLIST)
         for _ in range(20):
             passphrase = generate_passphrase()
-            # Reconstruct words by checking which wordlist entries appear
-            remaining = passphrase
-            matched = 0
-            for word in sorted(word_set, key=len, reverse=True):
-                if str(word) in remaining:
-                    remaining = remaining.replace(str(word), "", 1)
-                    matched += 1
-            assert matched >= 4
+            # count_words_in_passphrase asserts that all words are from the wordlist
+            # and that the entire string is matched.
+            assert count_words_in_passphrase(passphrase) == 4
 
     def test_produces_different_passphrases(self):
         results = {generate_passphrase() for _ in range(10)}
+        # With ~52 bits entropy, collisions are vanishingly rare
         assert len(results) > 1
+
+    def test_rejection_sampling(self):
+        # max_val = (0x10000 // len(WORDLIST)) * len(WORDLIST)
+        # For len(WORDLIST) = 7776, max_val = (65536 // 7776) * 7776 = 8 * 7776 = 62208
+        # We mock secrets.randbelow to return a value >= 62208 once, then a valid value.
+        with patch("mcp_relay_core.relay.client.secrets.randbelow") as mock_rand:
+            mock_rand.side_effect = [62208, 1000, 2000, 3000, 4000]
+            passphrase = generate_passphrase(4)
+            assert count_words_in_passphrase(passphrase) == 4
+            assert mock_rand.call_count == 5
 
 
 class TestCreateSession:
@@ -340,3 +365,211 @@ class TestPollForResult:
             )
             assert result == {"key": "value"}
             assert call_count == 3
+
+    @pytest.mark.asyncio
+    async def test_throws_relay_skipped_on_skipped_status(self):
+        response_skipped = MagicMock()
+        response_skipped.status_code = 200
+        response_skipped.json.return_value = {"status": "skipped"}
+
+        delete_response = MagicMock()
+        delete_response.status_code = 204
+
+        with patch("mcp_relay_core.relay.client.httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.get = AsyncMock(return_value=response_skipped)
+            mock_client.delete = AsyncMock(return_value=delete_response)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            _, pub = generate_key_pair()
+            priv, _ = generate_key_pair()
+            session = RelaySession(
+                session_id="skipped",
+                private_key=priv,
+                public_key=pub,
+                passphrase="a-b-c-d",
+                relay_url="url",
+            )
+
+            with pytest.raises(RuntimeError, match="RELAY_SKIPPED"):
+                await poll_for_result(
+                    "https://relay.example.com",
+                    session,
+                    interval_s=0.01,
+                    timeout_s=5.0,
+                )
+            mock_client.delete.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_handles_cleanup_failure_gracefully(self):
+        response_skipped = MagicMock()
+        response_skipped.status_code = 200
+        response_skipped.json.return_value = {"status": "skipped"}
+
+        with patch("mcp_relay_core.relay.client.httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.get = AsyncMock(return_value=response_skipped)
+            mock_client.delete = AsyncMock(side_effect=Exception("Cleanup failed"))
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            _, pub = generate_key_pair()
+            priv, _ = generate_key_pair()
+            session = RelaySession(
+                session_id="skipped",
+                private_key=priv,
+                public_key=pub,
+                passphrase="a-b-c-d",
+                relay_url="url",
+            )
+
+            with pytest.raises(RuntimeError, match="RELAY_SKIPPED"):
+                await poll_for_result(
+                    "https://relay.example.com",
+                    session,
+                    interval_s=0.01,
+                    timeout_s=5.0,
+                )
+
+
+class TestSendMessage:
+    @pytest.mark.asyncio
+    async def test_sends_message_successfully(self):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"id": "msg-123"}
+
+        with patch("mcp_relay_core.relay.client.httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            msg_id = await send_message(
+                "https://relay.example.com", "session-123", {"type": "test"}
+            )
+            assert msg_id == "msg-123"
+            mock_client.post.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_throws_on_send_error(self):
+        mock_response = MagicMock()
+        mock_response.status_code = 400
+
+        with patch("mcp_relay_core.relay.client.httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            with pytest.raises(RuntimeError, match="Failed to send message: 400"):
+                await send_message(
+                    "https://relay.example.com", "session-123", {"type": "test"}
+                )
+
+
+class TestPollForResponses:
+    @pytest.mark.asyncio
+    async def test_polls_successfully(self):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "responses": [{"messageId": "msg-123", "value": "response-val"}]
+        }
+
+        with patch("mcp_relay_core.relay.client.httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            val = await poll_for_responses(
+                "https://relay.example.com", "session-123", "msg-123", interval_s=0.01
+            )
+            assert val == "response-val"
+
+    @pytest.mark.asyncio
+    async def test_polls_multiple_times(self):
+        response_empty = MagicMock()
+        response_empty.status_code = 200
+        response_empty.json.return_value = {"responses": []}
+
+        response_success = MagicMock()
+        response_success.status_code = 200
+        response_success.json.return_value = {
+            "responses": [{"messageId": "msg-123", "value": "done"}]
+        }
+
+        call_count = 0
+
+        async def mock_get(url):
+            nonlocal call_count
+            call_count += 1
+            if call_count <= 2:
+                return response_empty
+            return response_success
+
+        with patch("mcp_relay_core.relay.client.httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.get = AsyncMock(side_effect=mock_get)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            val = await poll_for_responses(
+                "https://relay.example.com",
+                "session-123",
+                "msg-123",
+                interval_s=0.01,
+                timeout_s=5.0,
+            )
+            assert val == "done"
+            assert call_count == 3
+
+    @pytest.mark.asyncio
+    async def test_throws_on_poll_error(self):
+        mock_response = MagicMock()
+        mock_response.status_code = 500
+
+        with patch("mcp_relay_core.relay.client.httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            with pytest.raises(RuntimeError, match="Failed to poll responses: 500"):
+                await poll_for_responses(
+                    "https://relay.example.com",
+                    "session-123",
+                    "msg-123",
+                    interval_s=0.01,
+                )
+
+    @pytest.mark.asyncio
+    async def test_timeout_waiting_for_response(self):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"responses": []}
+
+        with patch("mcp_relay_core.relay.client.httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            with pytest.raises(RuntimeError, match="Timed out waiting for response"):
+                await poll_for_responses(
+                    "https://relay.example.com",
+                    "session-123",
+                    "msg-123",
+                    interval_s=0.01,
+                    timeout_s=0.05,
+                )
