@@ -70,7 +70,7 @@ function createAccountCard(idx, fieldsContainer, submitBtn) {
   const emailInput = emailContainer.querySelector('input[type="email"]')
   emailInput.addEventListener('input', () => {
     const domain = emailInput.value.split('@')[1]?.toLowerCase()
-    extraContainer.innerHTML = ''
+    extraContainer.textContent = ''
 
     if (!domain) return
 

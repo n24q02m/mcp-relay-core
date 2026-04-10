@@ -42,7 +42,7 @@ initForm({
   onFieldsRendered: ({ schema, fieldsContainer, submitBtn }) => {
     const modesContainer = document.getElementById('modes')
     renderModes(modesContainer, schema.modes, (mode) => {
-      fieldsContainer.innerHTML = ''
+      fieldsContainer.textContent = ''
       currentFields = mode.fields
       renderFields(fieldsContainer, mode.fields)
       submitBtn.disabled = false
