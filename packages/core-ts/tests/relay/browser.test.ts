@@ -98,4 +98,17 @@ describe('tryOpenBrowser', () => {
       expect(typeof result).toBe('boolean')
     })
   })
+
+  describe('security', () => {
+    it('handles shell metacharacters safely in URL', async () => {
+      vi.mocked(execFile).mockClear()
+      vi.mocked(readFile).mockResolvedValue('Linux version 5.15.0-microsoft-standard-WSL2')
+
+      const maliciousUrl = 'https://example.com/$(id)'
+      await tryOpenBrowser(maliciousUrl)
+
+      // Should be called with the exact URL string as a single argument, not interpreted by shell
+      expect(execFile).toHaveBeenCalledWith('wslview', [maliciousUrl], expect.any(Function))
+    })
+  })
 })
