@@ -1,9 +1,11 @@
-import { describe, expect, it, vi } from 'vitest'
+import { execFile } from 'node:child_process'
+import { readFile } from 'node:fs/promises'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 // Mock child_process and fs/promises before importing the module
 vi.mock('node:child_process', () => ({
   execFile: vi.fn((_cmd: string, _args: string[], cb: (err: Error | null) => void) => {
-    cb(new Error('no display'))
+    cb(null)
   })
 }))
 
@@ -11,11 +13,14 @@ vi.mock('node:fs/promises', () => ({
   readFile: vi.fn().mockRejectedValue(new Error('ENOENT'))
 }))
 
-import { execFile } from 'node:child_process'
-import { readFile } from 'node:fs/promises'
 import { tryOpenBrowser } from '../../src/relay/browser.js'
 
 describe('tryOpenBrowser', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.clearAllMocks()
+  })
+
   describe('URL validation', () => {
     it('rejects non-http URLs', async () => {
       expect(await tryOpenBrowser('file:///etc/passwd')).toBe(false)
@@ -96,6 +101,24 @@ describe('tryOpenBrowser', () => {
 
       const result = await tryOpenBrowser('https://example.com/wsl-test')
       expect(typeof result).toBe('boolean')
+    })
+  })
+
+  describe('security', () => {
+    it('handles shell metacharacters safely in URL', async () => {
+      vi.mocked(readFile).mockResolvedValue('Linux version 5.15.0-microsoft-standard-WSL2')
+
+      // Use Object.defineProperty to bypass read-only restriction on process.platform
+      Object.defineProperty(process, 'platform', {
+        value: 'linux',
+        configurable: true
+      })
+
+      const maliciousUrl = 'https://example.com/$(id)'
+      await tryOpenBrowser(maliciousUrl)
+
+      // Should be called with the exact URL string as a single argument, not interpreted by shell
+      expect(execFile).toHaveBeenCalledWith('wslview', [maliciousUrl], expect.any(Function))
     })
   })
 })

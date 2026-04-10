@@ -3,9 +3,9 @@
  * Uses jose (industry-standard, zero-dep, Web Crypto compatible).
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync, chmodSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
+import { join } from 'node:path'
 import * as jose from 'jose'
 
 const DEFAULT_KEYS_DIR = join(homedir(), '.mcp-relay', 'jwt-keys')
@@ -16,8 +16,8 @@ export class JWTIssuer {
   private privateKeyPath: string
   private publicKeyPath: string
   private kid = 'key-1'
-  private privateKey: any | null = null
-  private publicKey: any | null = null
+  private privateKey: CryptoKey | Uint8Array | null = null
+  private publicKey: CryptoKey | Uint8Array | null = null
   private _initialized = false
 
   constructor(serverName: string, keysDir = DEFAULT_KEYS_DIR) {

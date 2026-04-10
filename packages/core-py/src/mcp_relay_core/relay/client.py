@@ -53,7 +53,7 @@ class RelaySession:
 
     session_id: str
     private_key: EllipticCurvePrivateKey
-    public_key: EllipticCurvePublicKey
+    public_key: EllipticCurvePublicKey | None
     passphrase: str
     relay_url: str
 

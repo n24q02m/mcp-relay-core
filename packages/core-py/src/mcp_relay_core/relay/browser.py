@@ -31,10 +31,10 @@ def _open_in_wsl(url: str) -> bool:
     except (FileNotFoundError, subprocess.SubprocessError):
         pass
 
-    # Fallback to cmd.exe /c start
+    # Fallback to rundll32.exe url.dll,FileProtocolHandler
     try:
         subprocess.run(
-            ["cmd.exe", "/c", "start", url.replace("&", "^&")],
+            ["rundll32.exe", "url.dll,FileProtocolHandler", url],
             check=True,
             capture_output=True,
             timeout=10,
