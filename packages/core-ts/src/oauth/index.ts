@@ -1,3 +1,9 @@
 export { JWTIssuer } from './jwt-issuer.js'
-export { OAuthProvider, InMemoryAuthCache, type IOAuthSessionCache, type PreAuthSession, type OAuthProviderOptions } from './provider.js'
-export { SqliteUserStore, type IUserCredentialStore } from './user-store.js'
+export {
+  InMemoryAuthCache,
+  type IOAuthSessionCache,
+  OAuthProvider,
+  type OAuthProviderOptions,
+  type PreAuthSession
+} from './provider.js'
+export { type IUserCredentialStore, SqliteUserStore } from './user-store.js'
