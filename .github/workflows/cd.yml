@@ -139,6 +139,9 @@ jobs:
     needs: release
     if: needs.release.outputs.released == 'true'
     runs-on: ubuntu-latest
+    env:
+      UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
+      VERSION: ${{ needs.release.outputs.version }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2
@@ -154,8 +157,12 @@ jobs:
       - name: Build and publish
         run: |
           cd packages/core-py
-          uv build
-          uv publish
+          if curl -sSf "https://pypi.org/pypi/mcp-relay-core/$VERSION/json" > /dev/null 2>&1; then
+            echo "mcp-relay-core@$VERSION already published, skipping"
+          else
+            uv build
+            uv publish
+          fi
 
   # ============================================================================
   # Build Docker (relay-server only)
