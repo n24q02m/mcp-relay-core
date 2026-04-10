@@ -59,7 +59,8 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
   let currentFields = []
 
   renderModes(modesContainer, schema.modes, (mode) => {
-    fieldsContainer.innerHTML = ''
+    // Security enhancement: Use replaceChildren() instead of innerHTML to prevent XSS
+    fieldsContainer.replaceChildren()
     currentFields = mode.fields
     renderFields(fieldsContainer, mode.fields)
     submitBtn.disabled = false

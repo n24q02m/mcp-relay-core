@@ -90,7 +90,8 @@ if (!cliPubKeyB64 || !passphrase || !sessionId) {
     const emailInput = emailContainer.querySelector('input[type="email"]')
     emailInput.addEventListener('input', () => {
       const domain = emailInput.value.split('@')[1]?.toLowerCase()
-      extraContainer.innerHTML = ''
+      // Security enhancement: Use replaceChildren() instead of innerHTML to prevent XSS
+      extraContainer.replaceChildren()
 
       if (!domain) return
 
