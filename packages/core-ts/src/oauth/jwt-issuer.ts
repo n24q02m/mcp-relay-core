@@ -3,9 +3,9 @@
  * Uses jose (industry-standard, zero-dep, Web Crypto compatible).
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync, chmodSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
+import { join } from 'node:path'
 import * as jose from 'jose'
 
 const DEFAULT_KEYS_DIR = join(homedir(), '.mcp-relay', 'jwt-keys')
@@ -16,8 +16,8 @@ export class JWTIssuer {
   private privateKeyPath: string
   private publicKeyPath: string
   private kid = 'key-1'
-  private privateKey: any | null = null
-  private publicKey: any | null = null
+  private privateKey: jose.JWK | CryptoKey | null = null
+  private publicKey: jose.JWK | CryptoKey | null = null
   private _initialized = false
 
   constructor(serverName: string, keysDir = DEFAULT_KEYS_DIR) {
@@ -35,8 +35,8 @@ export class JWTIssuer {
     if (existsSync(this.privateKeyPath) && existsSync(this.publicKeyPath)) {
       const privatePem = readFileSync(this.privateKeyPath, 'utf-8')
       const publicPem = readFileSync(this.publicKeyPath, 'utf-8')
-      this.privateKey = await jose.importPKCS8(privatePem, 'RS256')
-      this.publicKey = await jose.importSPKI(publicPem, 'RS256')
+      this.privateKey = (await jose.importPKCS8(privatePem, 'RS256')) as CryptoKey
+      this.publicKey = (await jose.importSPKI(publicPem, 'RS256')) as CryptoKey
     } else {
       const { publicKey, privateKey } = await jose.generateKeyPair('RS256', {
         modulusLength: 2048,
@@ -57,7 +57,7 @@ export class JWTIssuer {
   /** Return JWKS payload for /.well-known/jwks.json */
   async getJwks(): Promise<jose.JSONWebKeySet> {
     if (!this.publicKey) throw new Error('JWTIssuer not initialized')
-    const jwk = await jose.exportJWK(this.publicKey)
+    const jwk = await jose.exportJWK(this.publicKey as CryptoKey)
     jwk.kid = this.kid
     jwk.use = 'sig'
     jwk.alg = 'RS256'
@@ -73,13 +73,13 @@ export class JWTIssuer {
       .setAudience(this.serverName)
       .setIssuedAt()
       .setExpirationTime(`${expiresInSeconds}s`)
-      .sign(this.privateKey)
+      .sign(this.privateKey as CryptoKey)
   }
 
   /** Verify JWT and return payload. Throws on failure. */
   async verifyAccessToken(token: string): Promise<jose.JWTPayload> {
     if (!this.publicKey) throw new Error('JWTIssuer not initialized')
-    const { payload } = await jose.jwtVerify(token, this.publicKey, {
+    const { payload } = await jose.jwtVerify(token, this.publicKey as CryptoKey, {
       issuer: this.serverName,
       audience: this.serverName
     })
