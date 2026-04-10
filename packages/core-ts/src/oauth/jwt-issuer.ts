@@ -3,9 +3,9 @@
  * Uses jose (industry-standard, zero-dep, Web Crypto compatible).
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync, chmodSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
+import { join } from 'node:path'
 import * as jose from 'jose'
 
 const DEFAULT_KEYS_DIR = join(homedir(), '.mcp-relay', 'jwt-keys')
@@ -16,7 +16,9 @@ export class JWTIssuer {
   private privateKeyPath: string
   private publicKeyPath: string
   private kid = 'key-1'
+  // biome-ignore lint/suspicious/noExplicitAny: jose does not export KeyLike in all environments
   private privateKey: any | null = null
+  // biome-ignore lint/suspicious/noExplicitAny: jose does not export KeyLike in all environments
   private publicKey: any | null = null
   private _initialized = false
 
