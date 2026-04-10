@@ -49,6 +49,32 @@ class SessionInfo:
     created_at: float
 
 
+async def _read_session_lock(server_name: str) -> SessionInfo | None:
+    """Read and parse the session lock file.
+
+    Handles corruption by cleaning up the file and returning None.
+    """
+    path = _lock_path(server_name)
+    try:
+        if not path.exists():
+            return None
+
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return SessionInfo(
+            session_id=data["session_id"],
+            relay_url=data["relay_url"],
+            created_at=data["created_at"],
+        )
+    except (json.JSONDecodeError, KeyError, OSError) as err:
+        logger.debug("Invalid session lock for %s: %s", server_name, err)
+        # Corrupt lock file: clean up and return None
+        try:
+            await release_session_lock(server_name)
+        except OSError:
+            pass
+        return None
+
+
 async def acquire_session_lock(
     server_name: str,
     max_age_s: float = _DEFAULT_MAX_AGE_S,
@@ -66,45 +92,28 @@ async def acquire_session_lock(
     Returns:
         SessionInfo if a valid lock exists, None otherwise.
     """
-    path = _lock_path(server_name)
-    try:
-        if not path.exists():
-            return None
+    info = await _read_session_lock(server_name)
+    if not info:
+        return None
 
-        data = json.loads(path.read_text(encoding="utf-8"))
-        info = SessionInfo(
-            session_id=data["session_id"],
-            relay_url=data["relay_url"],
-            created_at=data["created_at"],
-        )
-
-        age = time.time() - info.created_at
-        if age > max_age_s:
-            logger.debug(
-                "Session lock for %s expired (age=%.1fs > max=%.1fs)",
-                server_name,
-                age,
-                max_age_s,
-            )
-            # Expired lock: clean up and return None
-            await release_session_lock(server_name)
-            return None
-
+    age = time.time() - info.created_at
+    if age > max_age_s:
         logger.debug(
-            "Reusing session lock for %s (age=%.1fs)",
+            "Session lock for %s expired (age=%.1fs > max=%.1fs)",
             server_name,
             age,
+            max_age_s,
         )
-        return info
-
-    except (json.JSONDecodeError, KeyError, OSError) as err:
-        logger.debug("Invalid session lock for %s: %s", server_name, err)
-        # Corrupt lock file: clean up and return None
-        try:
-            await release_session_lock(server_name)
-        except OSError:
-            pass
+        # Expired lock: clean up and return None
+        await release_session_lock(server_name)
         return None
+
+    logger.debug(
+        "Reusing session lock for %s (age=%.1fs)",
+        server_name,
+        age,
+    )
+    return info
 
 
 async def write_session_lock(server_name: str, info: SessionInfo) -> None:
