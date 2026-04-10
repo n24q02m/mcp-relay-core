@@ -1,10 +1,3 @@
-"""OAuth 2.1 Provider logic for MCP servers.
-
-This implements the "MCP Server as Authorization Server" pattern.
-The MCP Server issues the JWTs, processes the PKCE verification,
-and uses the Relay Server purely as a UI consent transport.
-"""
-
 import base64
 import hashlib
 import hmac
@@ -15,8 +8,16 @@ from typing import Protocol
 
 from mcp_relay_core.crypto.ecdh import export_private_key, import_private_key
 from mcp_relay_core.relay.client import RelaySession, create_session, poll_for_result
+from mcp_relay_core.schema.types import RelayConfigSchema
 
 from .jwt_issuer import JWTIssuer
+
+"""OAuth 2.1 Provider logic for MCP servers.
+
+This implements the "MCP Server as Authorization Server" pattern.
+The MCP Server issues the JWTs, processes the PKCE verification,
+and uses the Relay Server purely as a UI consent transport.
+"""
 
 
 @dataclass
@@ -66,7 +67,7 @@ class OAuthProvider:
         self,
         server_name: str,
         relay_base_url: str,
-        relay_schema: dict,
+        relay_schema: RelayConfigSchema,
         jwt_issuer: JWTIssuer,
         cache: IOAuthSessionCache | None = None,
     ):
@@ -91,13 +92,6 @@ class OAuthProvider:
             self.relay_base_url,
             self.server_name,
             self.relay_schema,
-            oauth_state={
-                "clientId": client_id,
-                "redirectUri": redirect_uri,
-                "state": state,
-                "codeChallenge": code_challenge,
-                "codeChallengeMethod": code_challenge_method,
-            },
         )
 
         # Store private key and passphrase temporarily

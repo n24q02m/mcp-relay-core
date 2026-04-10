@@ -1,11 +1,13 @@
-"""RSA JWT Issuer and JWKS generation helper."""
-
 import datetime
+import typing
 from pathlib import Path
 
 import jwt
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
+
+"""RSA JWT Issuer and JWKS generation helper."""
+
 
 # Keys will be stored outside of the codebase to persist across server restarts
 DEFAULT_KEYS_DIR = Path.home() / ".mcp-relay" / "jwt-keys"
@@ -18,8 +20,8 @@ class JWTIssuer:
         self.private_key_path = self.keys_dir / f"{server_name}_private.pem"
         self.public_key_path = self.keys_dir / f"{server_name}_public.pem"
 
-        self.private_key = None
-        self.public_key = None
+        self.private_key: rsa.RSAPrivateKey | None = None
+        self.public_key: rsa.RSAPublicKey | None = None
         self._kid = "key-1"
         self._load_or_generate_keys()
 
@@ -28,11 +30,14 @@ class JWTIssuer:
 
         if self.private_key_path.exists() and self.public_key_path.exists():
             with open(self.private_key_path, "rb") as f:
-                self.private_key = serialization.load_pem_private_key(
-                    f.read(), password=None
+                self.private_key = typing.cast(
+                    typing.Any,
+                    serialization.load_pem_private_key(f.read(), password=None),
                 )
             with open(self.public_key_path, "rb") as f:
-                self.public_key = serialization.load_pem_public_key(f.read())
+                self.public_key = typing.cast(
+                    typing.Any, serialization.load_pem_public_key(f.read())
+                )
         else:
             self.private_key = rsa.generate_private_key(
                 public_exponent=65537,
@@ -94,12 +99,14 @@ class JWTIssuer:
             "iat": now,
             "exp": now + datetime.timedelta(seconds=expires_in_seconds),
         }
+        assert self.private_key is not None
         return jwt.encode(
             payload, self.private_key, algorithm="RS256", headers={"kid": self._kid}
         )
 
     def verify_access_token(self, token: str) -> dict:
         """Verify JWT and return payload. Raises standard PyJWT exceptions on failure."""
+        assert self.public_key is not None
         return jwt.decode(
             token,
             self.public_key,

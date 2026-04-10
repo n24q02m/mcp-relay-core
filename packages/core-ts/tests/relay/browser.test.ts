@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 // Mock child_process and fs/promises before importing the module
 vi.mock('node:child_process', () => ({
@@ -16,6 +16,10 @@ import { readFile } from 'node:fs/promises'
 import { tryOpenBrowser } from '../../src/relay/browser.js'
 
 describe('tryOpenBrowser', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   describe('URL validation', () => {
     it('rejects non-http URLs', async () => {
       expect(await tryOpenBrowser('file:///etc/passwd')).toBe(false)
@@ -103,6 +107,9 @@ describe('tryOpenBrowser', () => {
     it('handles shell metacharacters safely in URL', async () => {
       vi.mocked(execFile).mockClear()
       vi.mocked(readFile).mockResolvedValue('Linux version 5.15.0-microsoft-standard-WSL2')
+
+      // Use a more forceful stub for platform
+      vi.stubGlobal('process', { ...process, platform: 'linux' })
 
       const maliciousUrl = 'https://example.com/$(id)'
       await tryOpenBrowser(maliciousUrl)
