@@ -2,6 +2,7 @@
 
 import datetime
 from pathlib import Path
+from typing import Any
 
 import jwt
 from cryptography.hazmat.primitives import serialization
@@ -18,8 +19,8 @@ class JWTIssuer:
         self.private_key_path = self.keys_dir / f"{server_name}_private.pem"
         self.public_key_path = self.keys_dir / f"{server_name}_public.pem"
 
-        self.private_key = None
-        self.public_key = None
+        self.private_key: Any = None
+        self.public_key: Any = None
         self._kid = "key-1"
         self._load_or_generate_keys()
 
@@ -65,10 +66,11 @@ class JWTIssuer:
         pn = self.public_key.public_numbers()
 
         def to_base64url(val: int) -> str:
-            val_bytes = val.to_bytes((val.bit_length() + 7) // 8, byteorder='big')
+            val_bytes = val.to_bytes((val.bit_length() + 7) // 8, byteorder="big")
             # Custom base64url without padding
             import base64
-            return base64.urlsafe_b64encode(val_bytes).rstrip(b'=').decode('ascii')
+
+            return base64.urlsafe_b64encode(val_bytes).rstrip(b"=").decode("ascii")
 
         return {
             "keys": [
@@ -94,10 +96,7 @@ class JWTIssuer:
             "exp": now + datetime.timedelta(seconds=expires_in_seconds),
         }
         return jwt.encode(
-            payload,
-            self.private_key,
-            algorithm="RS256",
-            headers={"kid": self._kid}
+            payload, self.private_key, algorithm="RS256", headers={"kid": self._kid}
         )
 
     def verify_access_token(self, token: str) -> dict:

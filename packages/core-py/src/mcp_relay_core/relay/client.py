@@ -5,6 +5,7 @@ import base64
 import json
 import secrets
 from dataclasses import dataclass
+from typing import Any
 from urllib.parse import quote
 
 import httpx
@@ -53,7 +54,7 @@ class RelaySession:
 
     session_id: str
     private_key: EllipticCurvePrivateKey
-    public_key: EllipticCurvePublicKey
+    public_key: EllipticCurvePublicKey | None
     passphrase: str
     relay_url: str
 
@@ -62,6 +63,7 @@ async def create_session(
     relay_base_url: str,
     server_name: str,
     schema: RelayConfigSchema,
+    oauth_state: dict[str, Any] | None = None,
 ) -> RelaySession:
     """Create a new relay session.
 
@@ -69,6 +71,7 @@ async def create_session(
         relay_base_url: Base URL of the relay server.
         server_name: Server identifier.
         schema: Relay config schema for the setup form.
+        oauth_state: Optional OAuth state for the relay server.
 
     Returns:
         RelaySession with session ID, keys, passphrase, and relay URL.
@@ -80,14 +83,18 @@ async def create_session(
     private_key, public_key = generate_key_pair()
     passphrase = generate_passphrase()
 
+    payload = {
+        "sessionId": session_id,
+        "serverName": server_name,
+        "schema": dict(schema),
+    }
+    if oauth_state:
+        payload["oauthState"] = oauth_state
+
     async with httpx.AsyncClient() as client:
         response = await client.post(
             f"{relay_base_url}/api/sessions",
-            json={
-                "sessionId": session_id,
-                "serverName": server_name,
-                "schema": dict(schema),
-            },
+            json=payload,
         )
         if response.status_code >= 400:
             msg = f"Relay session creation failed: {response.status_code}"
