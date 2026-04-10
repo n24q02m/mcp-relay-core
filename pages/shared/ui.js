@@ -59,7 +59,9 @@ export function renderModes(container, modes, onSelect) {
     small.textContent = mode.description
     btn.append(strong, document.createElement('br'), small)
     btn.addEventListener('click', () => {
-      container.querySelectorAll('.mode-btn').forEach((b) => b.classList.remove('active'))
+      container.querySelectorAll('.mode-btn').forEach((b) => {
+        b.classList.remove('active')
+      })
       btn.classList.add('active')
       onSelect(mode)
     })
@@ -204,7 +206,7 @@ export function startMessagePolling(sessionId, statusContainer) {
             // Collapse input, show waiting status
             input.style.display = 'none'
             btn.style.display = 'none'
-            label.textContent = label.textContent + ' — submitted, waiting for server...'
+            label.textContent = `${label.textContent} — submitted, waiting for server...`
             label.style.color = '#888'
           }
           btn.addEventListener('click', submitResponse)
@@ -229,7 +231,7 @@ export function startMessagePolling(sessionId, statusContainer) {
           return
         }
       }
-    } catch (e) {
+    } catch (_e) {
       /* ignore */
     }
     setTimeout(pollMessages, 2000)
@@ -245,4 +247,35 @@ export function showStatus(container, message, type = 'info') {
   status.setAttribute('role', 'alert')
   status.textContent = message
   container.appendChild(status)
+}
+
+// Render a skip button that calls the skip API
+export function renderSkipButton(sessionId, container, options = {}) {
+  const skipBtn = document.createElement('button')
+  skipBtn.type = 'button'
+  skipBtn.textContent = options.text || 'Skip'
+  skipBtn.style.cssText =
+    options.style ||
+    'background: transparent; color: #888; border: 1px solid #555; border-radius: 4px; padding: 8px 16px; cursor: pointer; width: 100%; margin-top: 8px;'
+
+  skipBtn.addEventListener('click', async () => {
+    skipBtn.disabled = true
+    const originalText = skipBtn.textContent
+    skipBtn.textContent = 'Skipping...'
+    try {
+      const response = await fetch(`/api/sessions/${sessionId}/skip`, { method: 'POST' })
+      if (!response.ok) throw new Error(`Skip failed: ${response.status}`)
+
+      showStatus(document.getElementById('status-container'), options.successMessage || 'Setup skipped.', 'info')
+      const form = document.getElementById('setup-form')
+      if (form) form.style.display = 'none'
+      if (options.onSuccess) options.onSuccess()
+    } catch (err) {
+      skipBtn.disabled = false
+      skipBtn.textContent = originalText
+      showStatus(document.getElementById('status-container'), err.message || String(err), 'error')
+    }
+  })
+  container.appendChild(skipBtn)
+  return skipBtn
 }
