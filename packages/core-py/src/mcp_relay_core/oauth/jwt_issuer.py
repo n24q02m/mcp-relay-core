@@ -1,8 +1,8 @@
 """RSA JWT Issuer and JWKS generation helper."""
 
 import datetime
-from typing import Any
 from pathlib import Path
+from typing import Any
 
 import jwt
 from cryptography.hazmat.primitives import serialization
