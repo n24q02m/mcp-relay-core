@@ -8,6 +8,16 @@ import {
   PBKDF2_ITERATIONS
 } from '../../src/storage/encryption.js'
 
+describe('Constants', () => {
+  it('PBKDF2_ITERATIONS is 600,000', () => {
+    expect(PBKDF2_ITERATIONS).toBe(600_000)
+  })
+
+  it('LEGACY_PBKDF2_ITERATIONS is 100,000', () => {
+    expect(LEGACY_PBKDF2_ITERATIONS).toBe(100_000)
+  })
+})
+
 describe('deriveFileKey', () => {
   it('returns an AES-GCM CryptoKey', async () => {
     const key = await deriveFileKey('machine-123', 'alice')
@@ -110,5 +120,23 @@ describe('PBKDF2 iterations', () => {
 
     const encrypted = await encryptData(keyCurrent, 'secret')
     await expect(decryptData(keyLegacy, encrypted)).rejects.toThrow()
+  }, 60000)
+
+  it('deriveFileKey uses PBKDF2_ITERATIONS by default', async () => {
+    const keyDefault = await deriveFileKey('m', 'u')
+    const keyExplicit = await deriveFileKey('m', 'u', PBKDF2_ITERATIONS)
+
+    const encrypted = await encryptData(keyDefault, 'test')
+    const decrypted = await decryptData(keyExplicit, encrypted)
+    expect(decrypted).toBe('test')
+  }, 60000)
+
+  it('derivePassphraseKey uses PBKDF2_ITERATIONS by default', async () => {
+    const keyDefault = await derivePassphraseKey('pass')
+    const keyExplicit = await derivePassphraseKey('pass', PBKDF2_ITERATIONS)
+
+    const encrypted = await encryptData(keyDefault, 'test')
+    const decrypted = await decryptData(keyExplicit, encrypted)
+    expect(decrypted).toBe('test')
   }, 60000)
 })
