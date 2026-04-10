@@ -4,6 +4,7 @@ import asyncio
 import base64
 import json
 import secrets
+import time
 from dataclasses import dataclass
 from urllib.parse import quote
 
@@ -107,6 +108,32 @@ async def create_session(
     )
 
 
+async def _cleanup_skipped_session(
+    client: httpx.AsyncClient,
+    relay_base_url: str,
+    session_id: str,
+) -> None:
+    """Best-effort cleanup for skipped sessions."""
+    try:
+        await client.delete(f"{relay_base_url}/api/sessions/{session_id}")
+    except Exception:
+        pass
+
+
+def _decrypt_relay_result(session: RelaySession, result: dict) -> dict[str, str]:
+    """Decrypt the relay server's encrypted credential result."""
+    browser_pub = import_public_key(result["browserPub"])
+    shared_secret = derive_shared_secret(session.private_key, browser_pub)
+    aes_key = derive_aes_key(shared_secret, session.passphrase)
+
+    ciphertext = base64.b64decode(result["ciphertext"])
+    iv = base64.b64decode(result["iv"])
+    tag = base64.b64decode(result["tag"])
+
+    plaintext = decrypt(aes_key, ciphertext, iv, tag)
+    return json.loads(plaintext)
+
+
 async def poll_for_result(
     relay_base_url: str,
     session: RelaySession,
@@ -127,8 +154,6 @@ async def poll_for_result(
     Raises:
         RuntimeError: On session expiry, unexpected status, or timeout.
     """
-    import time
-
     deadline = time.monotonic() + timeout_s
 
     async with httpx.AsyncClient() as client:
@@ -141,31 +166,14 @@ async def poll_for_result(
                 body = response.json()
 
                 if body.get("status") == "skipped":
-                    # Cleanup session (best effort)
-                    try:
-                        await client.delete(
-                            f"{relay_base_url}/api/sessions/{session.session_id}"
-                        )
-                    except Exception:
-                        pass
+                    await _cleanup_skipped_session(
+                        client, relay_base_url, session.session_id
+                    )
                     msg = "RELAY_SKIPPED"
                     raise RuntimeError(msg)
 
                 result = body.get("result", body)
-                browser_pub = import_public_key(result["browserPub"])
-                shared_secret = derive_shared_secret(session.private_key, browser_pub)
-                aes_key = derive_aes_key(shared_secret, session.passphrase)
-
-                ciphertext = base64.b64decode(result["ciphertext"])
-                iv = base64.b64decode(result["iv"])
-                tag = base64.b64decode(result["tag"])
-
-                plaintext = decrypt(aes_key, ciphertext, iv, tag)
-
-                # Don't delete session — keep alive for bidirectional messaging.
-                # Session auto-expires via TTL (10 min).
-
-                return json.loads(plaintext)
+                return _decrypt_relay_result(session, result)
 
             if response.status_code == 404:
                 msg = "Session expired or not found"
@@ -200,6 +208,7 @@ async def send_message(
         RuntimeError: If the relay returns a non-2xx status.
     """
     async with httpx.AsyncClient() as client:
+        # Don't use session_id from RelaySession as it might not be available
         response = await client.post(
             f"{relay_base_url}/api/sessions/{session_id}/messages",
             json=message,
@@ -232,8 +241,6 @@ async def poll_for_responses(
     Raises:
         RuntimeError: On timeout or request failure.
     """
-    import time
-
     deadline = time.monotonic() + timeout_s
 
     async with httpx.AsyncClient() as client:
