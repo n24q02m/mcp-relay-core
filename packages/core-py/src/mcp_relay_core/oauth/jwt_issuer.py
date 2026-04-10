@@ -1,6 +1,7 @@
 """RSA JWT Issuer and JWKS generation helper."""
 
 import datetime
+from typing import Any
 from pathlib import Path
 
 import jwt
@@ -18,8 +19,8 @@ class JWTIssuer:
         self.private_key_path = self.keys_dir / f"{server_name}_private.pem"
         self.public_key_path = self.keys_dir / f"{server_name}_public.pem"
 
-        self.private_key = None
-        self.public_key = None
+        self.private_key: Any = None
+        self.public_key: Any = None
         self._kid = "key-1"
         self._load_or_generate_keys()
 
@@ -94,13 +95,17 @@ class JWTIssuer:
             "iat": now,
             "exp": now + datetime.timedelta(seconds=expires_in_seconds),
         }
-        return jwt.encode(
+        if self.private_key is None:
+            raise RuntimeError("JWTIssuer not initialized")
+        return jwt.encode(  # type: ignore
             payload, self.private_key, algorithm="RS256", headers={"kid": self._kid}
         )
 
     def verify_access_token(self, token: str) -> dict:
         """Verify JWT and return payload. Raises standard PyJWT exceptions on failure."""
-        return jwt.decode(
+        if self.public_key is None:
+            raise RuntimeError("JWTIssuer not initialized")
+        return jwt.decode(  # type: ignore
             token,
             self.public_key,
             algorithms=["RS256"],
