@@ -1,7 +1,6 @@
 """Config resolution: env vars -> config file -> defaults -> None."""
 
 import os
-import re
 from typing import Literal
 
 from mcp_relay_core.storage.config_file import read_config
@@ -44,38 +43,71 @@ def resolve_config(
         ResolvedConfig with config dict and source.
     """
     # 1. Check env vars
-    env_config: dict[str, str] = {}
-    all_env_present = len(required_fields) > 0
-    for field in required_fields:
-        env_key = (
-            "MCP_"
-            + re.sub(r"-", "_", server_name).upper()
-            + "_"
-            + re.sub(r"-", "_", field).upper()
-        )
-        value = os.environ.get(env_key, "")
-        if value:
-            env_config[field] = value
-        else:
-            all_env_present = False
-
-    if all_env_present:
+    env_config = _resolve_from_env(server_name, required_fields)
+    if env_config is not None:
         return ResolvedConfig(config=env_config, source="env")
 
     # 2. Check config file
-    file_config = read_config(server_name)
+    file_config = _resolve_from_file(server_name, required_fields)
     if file_config is not None:
-        has_all = all(
-            f in file_config and file_config[f] != "" for f in required_fields
-        )
-        if has_all:
-            return ResolvedConfig(config=file_config, source="file")
+        return ResolvedConfig(config=file_config, source="file")
 
     # 3. Check defaults
-    if defaults is not None:
-        has_all = all(f in defaults and defaults[f] != "" for f in required_fields)
-        if has_all:
-            return ResolvedConfig(config={**defaults}, source="defaults")
+    defaults_config = _resolve_from_defaults(required_fields, defaults)
+    if defaults_config is not None:
+        return ResolvedConfig(config=defaults_config, source="defaults")
 
     # 4. Nothing found
     return ResolvedConfig(config=None, source=None)
+
+
+def _resolve_from_env(
+    server_name: str,
+    required_fields: list[str],
+) -> dict[str, str] | None:
+    """Resolve config from environment variables."""
+    if not required_fields:
+        return None
+
+    server_prefix = "MCP_" + server_name.replace("-", "_").upper() + "_"
+    env_config: dict[str, str] = {}
+
+    for field in required_fields:
+        env_key = server_prefix + field.replace("-", "_").upper()
+        value = os.environ.get(env_key, "")
+        if not value:
+            return None
+        env_config[field] = value
+
+    return env_config
+
+
+def _resolve_from_file(
+    server_name: str,
+    required_fields: list[str],
+) -> dict[str, str] | None:
+    """Resolve config from encrypted config file."""
+    file_config = read_config(server_name)
+    if file_config is None:
+        return None
+
+    for field in required_fields:
+        if field not in file_config or file_config[field] == "":
+            return None
+
+    return file_config
+
+
+def _resolve_from_defaults(
+    required_fields: list[str],
+    defaults: dict[str, str] | None,
+) -> dict[str, str] | None:
+    """Resolve config from provided defaults."""
+    if defaults is None:
+        return None
+
+    for field in required_fields:
+        if field not in defaults or defaults[field] == "":
+            return None
+
+    return {**defaults}
