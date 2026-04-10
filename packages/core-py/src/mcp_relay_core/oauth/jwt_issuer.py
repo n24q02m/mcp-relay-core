@@ -28,9 +28,7 @@ class JWTIssuer:
 
         if self.private_key_path.exists() and self.public_key_path.exists():
             with open(self.private_key_path, "rb") as f:
-                pk = serialization.load_pem_private_key(
-                    f.read(), password=None
-                )
+                pk = serialization.load_pem_private_key(f.read(), password=None)
                 assert isinstance(pk, rsa.RSAPrivateKey)
                 self.private_key = pk
             with open(self.public_key_path, "rb") as f:
