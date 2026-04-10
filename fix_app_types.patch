@@ -1,0 +1,15 @@
+<<<<<<< SEARCH
+  // Secure CORS origin handler
+  app.use(
+    cors({
+      origin: (requestOrigin, callback) => {
+        if (!corsOrigin || corsOrigin === false) return callback(null, false)
+        if (corsOrigin === '*') return callback(null, true)
+=======
+  // Secure CORS origin handler
+  app.use(
+    cors({
+      origin: (requestOrigin, callback) => {
+        if (corsOrigin === false) return callback(null, false)
+        if (corsOrigin === '*') return callback(null, true)
+>>>>>>> REPLACE
